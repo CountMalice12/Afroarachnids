@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Random Genre Selector</title>
+    <style>
+        body {
+            background-color: #000000; /* Black background */
+            font-family: "Arial", sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            font-family: "Arial", sans-serif;
+            font-size: 36px;
+            color: #ff0000; /* Red color for a black widow theme */
+        }
+
+        .item {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 18px;
+            margin: 20px;
+            padding: 20px;
+            border: 2px solid #ff0000; /* Red border */
+            background-color: #000000; /* Black background for items */
+            color: #ffffff; /* White text for items */
+        }
+
+        button {
+            background-color: #ff0000; /* Red background for buttons */
+            color: #000000; /* Black text for buttons */
+            font-family: "Arial", sans-serif;
+            font-size: 16px;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button#selectItemButton {
+            border-radius: 50%; /* Rounded shape for the "Select Random Item" button */
+        }
+
+        button#similarItemButton {
+            border-radius: 50%; /* Rounded shape for the "Similar Content" button */
+        }
+    </style>
+</head>
+<body>
+    <h1>Random Item Selector</h1>
+    
+    <button id="selectItemButton" onclick="selectRandomItem()">&#128375; Select Random Item</button>
+    <button id="similarItemButton" onclick="selectSimilarItem()" disabled>&#128375; Similar Content</button>
+
+    <div class="item" id="selectedItem">
+        <p><span id="itemName"></span></p>
+        <p><span id="itemDescription"></span></p>
+    </div>
+
+
+    <script>
+        const categories = {
+            movies: [
+                {
+                    name: 'A Clockwork Orange',
+                    theme: 'Dystopian Society',
+                    genre: 'Crime, Science Fiction',
+                    summary: 'In a dystopian future, a young man is subjected to an experimental procedure...'
+                },
+                {
+                    name: 'Fight Club',
+                    theme: 'Identity Crisis',
+                    genre: 'Psychological Thriller',
+                    summary: 'A disillusioned man suffering from insomnia forms an underground fight club...'
+                },
+                {
+                    name: 'American Psycho',
+                    theme: 'Sociopathy',
+                    genre: 'Dark Comedy, Horror',
+                    summary: 'A wealthy and sociopathic investment banker leads a double life as a serial killer...'
+                },
+                {
+                    name: 'V for Vendetta',
+                    theme: 'Political Revolution',
+                    genre: 'Action, Dystopian',
+                    summary: 'In a totalitarian future, a masked vigilante named V seeks to ignite a revolution...'
+                },
+                {
+                    name: 'The Lego Movie',
+                    theme: 'Imagination and Creativity',
+                    genre: 'Animation, Adventure',
+                    summary: 'An ordinary Lego construction worker is mistakenly believed to be the "Special" and is recruited to join a quest...'
+                },
+                {
+                    name: 'Parasite',
+                    theme: 'Class Divide',
+                    genre: 'Dark Comedy, Thriller',
+                    summary: 'This South Korean film explores social and economic inequalities as a poor family cunningly infiltrates the lives...'
+                },
+                {
+                    name: 'Snowpiercer',
+                    theme: 'Class Struggle',
+                    genre: 'Sci-Fi, Thriller',
+                    summary: 'In a post-apocalyptic world, survivors are segregated by class on a perpetual-motion train, leading to a violent revolt...'
+                },
+                {
+                    name: 'Bladerunner Series',
+                    theme: 'Artificial Intelligence',
+                    genre: 'Science Fiction, Neo-Noir',
+                    summary: 'The Blade Runner series delves into the ethical and existential questions surrounding replicants (androids)...'
+                },
+                {
+                    name: 'Sorry To Bother You',
+                    theme: 'Capitalism and Exploitation',
+                    genre: 'Dark Comedy, Fantasy',
+                    summary: 'In an alternate reality, a telemarketer discovers a disturbing secret about corporate exploitation...'
+                },
+                {
+                    name: 'Wall-E',
+                    theme: 'Environmental Conservation',
+                    genre: 'Animation, Science Fiction',
+                    summary: 'In a post-apocalyptic future, a lone waste-collecting robot embarks on a space journey that highlights themes...'
+                }
+            ],
+            tvShows: [
+                {
+                    name: 'The Boys',
+                    theme: 'Superheroes and Corruption',
+                    genre: 'Superhero, Black Comedy',
+                    summary: 'This series explores the dark side of superheroes and the corporation that manages them...'
+                },
+                {
+                    name: 'Peaky Blinders',
+                    theme: 'Organized Crime',
+                    genre: 'Crime Drama',
+                    summary: 'Set in post-World War I Birmingham, England, it follows the Shelby crime family\'s rise to power and their criminal endeavors...'
+                },
+                {
+                    name: 'Mr. Robot',
+                    theme: 'Hacking and Identity',
+                    genre: 'Thriller, Psychological Drama',
+                    summary: 'A cybersecurity expert with mental health issues becomes a vigilante hacker, challenging corporate power and exploring themes...'
+                },
+                {
+                    name: 'The Wire',
+                    theme: 'Urban Decay',
+                    genre: 'Crime, Drama',
+                    summary: 'This series examines various aspects of Baltimore, including drug trade, the port, and the schools, and delves into systemic issues such as crime, poverty...'
+                },
+                {
+                    name: 'Ghost in the Shell',
+                    theme: 'Transhumanism',
+                    genre: 'Science Fiction, Cyberpunk',
+                    summary: 'A special police force investigates cybercrime in a future where humans and machines merge, exploring themes of technology and identity...'
+                },
+                {
+                    name: 'Neon Genesis Evangelion',
+                    theme: 'Existentialism',
+                    genre: 'Mecha, Psychological',
+                    summary: 'A group of teenagers pilot giant robots to protect Earth from mysterious beings, delving into complex psychological and philosophical themes...'
+                },
+                {
+                    name: 'Cyberpunk Edgerunners',
+                    theme: 'Cyberpunk',
+                    genre: 'Animation, Cyberpunk',
+                    summary: 'Set in a dystopian future, this anime series explores the lives of "Edgerunners," individuals who exist on the fringes of society, highlighting the cyberpunk genre...'
+                },
+                {
+                    name: 'Psycho-Pass',
+                    theme: 'Surveillance and Crime',
+                    genre: 'Sci-Fi, Crime',
+                    summary: 'In a future where a computer system determines criminal tendencies, a team of detectives confronts the ethical implications of law enforcement...'
+                },
+                {
+                    name: 'Mobile Suit Gundam Iron-Blooded Orphans',
+                    theme: 'War and Child Soldiers',
+                    genre: 'Mecha, Space Opera',
+                    summary: 'A group of young soldiers in mechanized suits navigate a politically charged war, examining themes of conflict and child soldiers...'
+                },
+                {
+                    name: 'Akira',
+                    theme: 'Psychic Powers',
+                    genre: 'Science Fiction, Cyberpunk',
+                    summary: 'In a post-apocalyptic Tokyo, psychic abilities lead to government experimentation, highlighting themes of power and control...'
+                },
+                {
+                    name: 'Howl’s Moving Castle',
+                    theme: 'Magic and Identity',
+                    genre: 'Animation, Fantasy',
+                    summary: 'A young woman, cursed to become old, seeks refuge in a magical moving castle, exploring themes of identity and transformation...'
+                },
+                {
+                    name: 'Atlanta',
+                    theme: 'Life in the Music Industry',
+                    genre: 'Comedy, Drama',
+                    summary: 'The series follows the lives of individuals navigating the music scene in Atlanta, exploring themes of race, class, and ambition...'
+                },
+                {
+                    name: 'Code Geass',
+                    theme: 'Rebellion and Power',
+                    genre: 'Mecha, Thriller',
+                    summary: 'In an alternate future, a former prince gains the power to control minds and leads a rebellion against an oppressive empire, examining themes of power and rebellion...'
+                }
+            ],
+            videoGames: [
+                {
+                    name: 'Cyberpunk 2077',
+                    theme: 'Cyberpunk',
+                    genre: 'Open World, RPG',
+                    summary: 'Set in a dystopian future, the game explores themes of cybernetics, crime, and societal decay.'
+                },
+                {
+                    name: 'Fallout: New Vegas',
+                    theme: 'Post-Apocalypse',
+                    genre: 'Open World, RPG',
+                    summary: 'In a post-apocalyptic wasteland, players navigate a world of factions, survival, and moral choices.'
+                },
+                {
+                    name: 'Persona Series',
+                    theme: 'Identity and Psychology',
+                    genre: 'RPG, Social Simulation',
+                    summary: 'The series combines elements of psychology and mythology, as players explore the depths of their own psyches and the personas within.'
+                },
+                {
+                    name: 'Detroit: Become Human',
+                    theme: 'Artificial Intelligence and Ethics',
+                    genre: 'Interactive Drama, Adventure',
+                    summary: 'In a future where androids gain self-awareness, the game explores themes of AI, ethics, and civil rights.'
+                },
+                {
+                    name: 'Metal Gear Solid',
+                    theme: 'Espionage and Political Intrigue',
+                    genre: 'Stealth, Action',
+                    summary: 'A series known for its complex narrative, it delves into espionage, military technology, and political conspiracies.'
+                },
+                {
+                    name: 'Bioshock',
+                    theme: 'Objectivism and Morality',
+                    genre: 'First-Person Shooter, RPG',
+                    summary: 'The series is set in a dystopian underwater city and explores themes of objectivism, morality, and power.'
+                },
+                {
+                    name: 'Wolfenstein Series',
+                    theme: 'Alternate History',
+                    genre: 'First-Person Shooter',
+                    summary: 'Set in an alternate history where the Nazis won World War II, the series focuses on resistance and confronting fascism.'
+                },
+                {
+                    name: 'Disco Elysium',
+                    theme: 'Existentialism and Identity',
+                    genre: 'RPG, Detective',
+                    summary: 'Players take on the role of a troubled detective in a world of political turmoil, exploring themes of existentialism and personal identity.'
+                },
+                {
+                    name: 'Far Cry 2',
+                    theme: 'Conflict and Moral Ambiguity',
+                    genre: 'First-Person Shooter',
+                    summary: 'Set in a war-torn African country, the game explores themes of conflict, violence, and moral ambiguity.'
+                },
+                {
+                    name: 'Watch Dogs',
+                    theme: 'Surveillance and Hacking',
+                    genre: 'Action, Open World',
+                    summary: 'Players use hacking skills to navigate a near-future world of surveillance, exploring themes of technology and privacy.'
+                }
+            ]
+        };
+
+      let selectedItem = null;
+
+        function selectRandomItem() {
+            const categoryKeys = Object.keys(categories);
+            const randomCategory = categoryKeys[Math.floor(Math.random() * categoryKeys.length)];
+            const categoryItems = categories[randomCategory];
+            selectedItem = categoryItems[Math.floor(Math.random() * categoryItems.length)];
+
+            document.getElementById('itemName').textContent = selectedItem.name;
+            document.getElementById('itemDescription').textContent = selectedItem.summary;
+            document.getElementById('selectedItem').style.color = getRandomColor();
+            document.getElementById('selectedItem').style.fontFamily = 'Courier New';
+            document.getElementById('similarItemButton').disabled = false;
+        }
+
+        function selectSimilarItem() {
+            if (!selectedItem) {
+                alert("Please select a random item first.");
+                return;
+            }
+
+            const similarItems = findSimilarItems(selectedItem);
+
+            if (similarItems.length === 0) {
+                alert("No similar items found.");
+                return;
+            }
+
+            const randomSimilarItem = similarItems[Math.floor(Math.random() * similarItems.length)];
+
+            document.getElementById('itemName').textContent = randomSimilarItem.name;
+            document.getElementById('itemDescription').textContent = randomSimilarItem.summary;
+            document.getElementById('selectedItem').style.color = getRandomColor();
+        }
+
+        function findSimilarItems(selectedItem) {
+            const similarItems = [];
+            const selectedKeywords = (selectedItem.theme + ' ' + selectedItem.genre + ' ' + selectedItem.summary).toLowerCase().split(/\W+/);
+
+            for (const category of Object.keys(categories)) {
+                for (const item of categories[category]) {
+                    if (item !== selectedItem) {
+                        const itemKeywords = (item.theme + ' ' + item.genre + ' ' + item.summary).toLowerCase().split(/\W+/);
+
+                        for (const keyword of selectedKeywords) {
+                            if (itemKeywords.includes(keyword)) {
+                                similarItems.push(item);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return similarItems;
+        }
+
+        function getRandomColor() {
+            return '#' + Math.floor(Math.random()*16777215).toString(16);
+        }
+    </script>
+</body>
+</html>
