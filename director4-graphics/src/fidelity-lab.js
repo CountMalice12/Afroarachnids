@@ -6,6 +6,8 @@ import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniform
 import {EffectComposer,RenderPass,EffectPass,BloomEffect} from 'postprocessing';
 import {makeEarth,makeStars,makeShip} from './orbital-assets.js';
 import {generatePalaceMaterials} from './palace-textures.js';
+import {loadScannedMaterials,remapAuthoredHullMaterials} from './scanned-materials.js';
+import {dressExteriorGantry,dressLuxuryCasino,dressDockingCore} from './cinematic-dressing.js';
 
 // All modular assets are exported real GLB mesh geometry with PBR channels.
 // The background artwork is an art-direction reference, not a background image.
@@ -21,8 +23,8 @@ body{background:#050e19;color:#dff5fb;font-family:Inter,system-ui,sans-serif;mar
 #fd-viewport{height:calc(100vh - 59px);min-height:390px;position:relative;overflow:hidden;touch-action:none;background:#010b16}
 #fd-viewport canvas{width:100%;height:100%;display:block}
 .fd-hud{pointer-events:none;position:absolute;color:#d0f1fa;text-shadow:0 1px 3px #05121c}
-#fd-zone{left:17px;top:16px;padding:11px 15px;background:linear-gradient(120deg,#0a2035df,#071e2bbb);border-left:3px solid #6be5ff;backdrop-filter:blur(9px)}
-#fd-zone .title{font-weight:800;font-size:17px;letter-spacing:.05em}
+#fd-zone{left:17px;top:16px;padding:10px 14px;background:linear-gradient(120deg,#0a2035db,#071e2ba6);border-left:3px solid #6be5ff;backdrop-filter:blur(9px)}
+#fd-zone .title{font-weight:800;font-size:15px;letter-spacing:.05em}
 #fd-zone .meta{color:#80ccda;font-size:10px;margin-top:3px;letter-spacing:.1em}
 #fd-telemetry{right:14px;top:14px;text-align:right;background:#071a27bd;border:1px solid #438393;border-radius:5px;padding:8px 10px;font-size:9px;line-height:1.6}
 #fd-actions-hud{left:12px;bottom:14px;background:#071a28dd;border:1px solid #4d96a7;border-radius:7px;padding:9px 14px;font-size:11px;display:flex;gap:18px}
@@ -61,7 +63,7 @@ body{background:#050e19;color:#dff5fb;font-family:Inter,system-ui,sans-serif;mar
 <div id="fd-controls"><span></span><button data-move="0,-1">↑</button><span></span><button data-move="-1,0">←</button><button data-move="0,1">↓</button><button data-move="1,0">→</button></div>
 <p>WASD moves the crew; drag to orbit the camera and pinch to zoom. F shoots and E opens an adjacent airlock. A destroyed cargo case no longer blocks movement or fire.</p>
 <h3>GRAPHICS PROFILE</h3><select id="fd-quality"><option value="mobile">Mobile</option><option value="balanced" selected>Balanced</option><option value="ultra">Ultra • GPU</option></select>
-<div id="fd-mini">9 original GLB asset families • PBR metallic/roughness maps • physical geometry • dynamic lighting • responsive render scale</div>
+<div id="fd-mini">9 original GLB asset families • CC0 photo-scanned PBR maps • actual GLB geometry • dynamic lighting • responsive render scale</div>
 <h3>SESSION EVENT LOG</h3><div id="fd-log"></div><p>Art-directed 3D demonstration using real GLB assets. It is not an update to your live Director 4.0 website or a promise of photorealism on every device.</p>
 </aside></div>`;
 const el=id=>document.querySelector('#fd-'+id);
@@ -74,7 +76,7 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume,earthTexture=null;
+let sampleVolume,earthTexture=null,scannedBank=null;
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
  const g=new THREE.Group();
@@ -175,7 +177,7 @@ function buildRing(){
 }
 function lighting(mode){
  const cold=mode==='gantry';
- lightSun.intensity=cold?4.8:2.1;
+ lightSun.intensity=cold?3.7:2.7;
  lightSun.color.setHex(cold?0xd5eaff:0xffdbb6);
  scene.background=new THREE.Color(cold?0x010b18:0x0a1023);
  const main=light(-10,5,-6,cold?0xffbd73:0xffc797,cold?44:32,21);
@@ -213,9 +215,10 @@ function buildGantry(){
  for(let x=-20;x<=20;x+=10){cyl([x,0,-11],[x,5.7,-11],.27,M.gold)}
  const scanner=new THREE.Mesh(new THREE.CylinderGeometry(4.0,4,.045,72),M.holo);
  scanner.position.set(0,.14,-1);roomGroup.add(scanner);
+ dressExteriorGantry(roomGroup,{high:quality!=='mobile'});
 }
 function buildCasino(){
- lighting('casino');const marble=generatePalaceMaterials(THREE).marble;
+ lighting('casino');const marble=M.marble;
  box(0,-.48,0,46,.8,32,marble,false);
  const bulks=[];for(let x of [-20,-15,-10,10,15,20])bulks.push(matrix(x,0,-15));
  batch('pressure_bulkhead_5m',bulks);
@@ -241,6 +244,7 @@ function buildCasino(){
  for(let x=-18;x<=18;x+=6)box(x,5.6,-9,4.3,.1,.5,M.violet,false);
  // Sky through full glass wall: actual 3D earth.
  const earth=makeEarthPhoto();earth.position.set(80,-205,-380);roomGroup.add(earth);
+ dressLuxuryCasino(roomGroup,{high:quality!=='mobile'});
 }
 function buildDock(){
  lighting('gantry');buildSky();const tiles=[];
@@ -258,25 +262,33 @@ function buildDock(){
   collider(x,8,1.8,1.45,'DOCK CARGO',22,a)}
  for(let x of [-19,19]){const a=clone('airlock_door_3m',x,0,-15.5);collider(x,-15.5,3.5,.6,'HANGAR AIRLOCK',0,a,true)}
  for(let x of [-19,-7,7,19])clone('gantry_service_console',x,0,12);
+ dressDockingCore(roomGroup,{high:quality!=='mobile'});
 }
 async function start(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x030c17);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.46;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
  camera=new THREE.PerspectiveCamera(45,1,.15,1600);camera.position.set(28,18,29);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
- scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,2.3));
+ scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,1.25));
  lightSun=new THREE.DirectionalLight(0xd8eaff,4.8);lightSun.position.set(-38,75,37);lightSun.castShadow=!cap;
  lightSun.shadow.mapSize.set(2048,2048);lightSun.shadow.camera.left=-95;lightSun.shadow.camera.right=95;
  lightSun.shadow.camera.top=95;lightSun.shadow.camera.bottom=-95;scene.add(lightSun);
  if(!cap){try{const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromScene(new RoomEnvironment(),.05).texture;p.dispose()}catch(e){addLog('IBL probe unavailable')}}
  if(!cap){composer=new EffectComposer(renderer,{frameBufferType:THREE.HalfFloatType});composer.addPass(new RenderPass(scene,camera));
   composer.addPass(new EffectPass(camera,new BloomEffect({intensity:.73,luminanceThreshold:.8,luminanceSmoothing:.25,mipmapBlur:true})));}
+ try{scannedBank=await loadScannedMaterials(addLog);
+ M.plate=scannedBank.gantry_metal;
+ M.marble=scannedBank.casino_marble;
+ M.wornHull=scannedBank.weathered_hull;
+ addLog('Photo-scanned material bank applied to Palace environment.');
+ }catch(e){addLog('Scanned textures unavailable, using procedural fallback: '+e.message)}
  try{earthTexture=await new THREE.TextureLoader().loadAsync('./textures/earth_atmos_2048.jpg');earthTexture.colorSpace=THREE.SRGBColorSpace;earthTexture.anisotropy=8;addLog('Loaded photographic-style Earth texture.')}catch(e){addLog('Earth image unavailable; retaining generated sphere.')} 
  const loaded=await Promise.all(names.map(async n=>{const result=await loader.loadAsync('./models/'+n+'.glb');glb.set(n,result.scene);return n}));
+ if(scannedBank)remapAuthoredHullMaterials(glb,scannedBank,addLog);
  addLog('Loaded '+loaded.length+' original GLBs with physically based material channels');
  document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>loadScene(b.dataset.scene));
  for(const [id,handler] of [['shoot',shoot],['scan',scan],['open',openAirlock],['end',endRound],['alarm',()=>{alarm=!alarm;el('alert').style.display=alarm?'block':'none';toast(alarm?'LOCKDOWN / LEVEL 03':'ALARM CLEARED');}],['camera',()=>{cinematic=!cinematic;applyCamera();}]])el(id).onclick=handler;
