@@ -10,6 +10,8 @@ import {generatePalaceMaterials} from './palace-textures.js';
 import {loadScannedMaterials,remapAuthoredHullMaterials} from './scanned-materials.js';
 import {dressExteriorGantry,dressLuxuryCasino,dressDockingCore} from './cinematic-dressing.js';
 import {buildCasinoHero} from './casino-hero.js';
+import {surroundCasino} from './casino-enclosure.js';
+import {loadCasinoHeroProps,dressCasinoWithScans} from './casino-hero-props.js';
 import {createTacticalCharacter} from './character-art.js';
 import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
 import {createCombatVFX} from './combat-vfx.js';
@@ -89,7 +91,7 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0;
+let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0,scanModels=new Map();
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
  const g=new THREE.Group();
@@ -239,6 +241,11 @@ function buildCasino(){
    earth:makeEarthPhoto,
    high:!cap&&quality!=='mobile'
  });
+ const shell=surroundCasino({group:roomGroup,addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
+   high:!cap&&quality!=='mobile'});
+ const scans=dressCasinoWithScans(roomGroup,scanModels,{mobile:cap||quality==='mobile'});
+ addLog('Architectural envelope: '+shell.sealedSides+' enclosed hull sides, '+shell.windows+' observation bays, real upper soffit and ring supports.');
+ addLog('CC0 scanned decor: '+scans.chairs+' chairs, '+scans.plants+' potted plants and '+scans.shrubs+' flowering bushes.');
  addLog('Rebuilt photorealism-oriented Casino: two-level mezzanine, 17-step grand staircase, custom red-velvet gaming tables, curved bar and botanical architecture.');
  addLog('Casino art inventory: '+details.gamingTables+' tables, '+details.plants+' architectural trees, gold inlays, panoramic observation windows.');
 }
@@ -266,7 +273,7 @@ async function start(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.11;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
- camera=new THREE.PerspectiveCamera(51,1,.15,1600);camera.position.set(29,23,37);
+ camera=new THREE.PerspectiveCamera(47,1,.15,1600);camera.position.set(17.7,14.1,23.2);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,1.25));
@@ -310,6 +317,7 @@ async function start(){
  const loaded=await Promise.all(names.map(async n=>{const result=await loader.loadAsync('./models/'+n+'.glb');glb.set(n,result.scene);return n}));
  if(scannedBank)remapAuthoredHullMaterials(glb,scannedBank,addLog);
  addLog('Loaded '+loaded.length+' original GLBs with physically based material channels');
+ scanModels=await loadCasinoHeroProps(loader,addLog);
  document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>loadScene(b.dataset.scene));
  for(const [id,handler] of [['shoot',shoot],['scan',scan],['open',openAirlock],['end',endRound],['alarm',()=>{alarm=!alarm;el('alert').style.display=alarm?'block':'none';toast(alarm?'LOCKDOWN / LEVEL 03':'ALARM CLEARED');}],['camera',()=>{cinematic=!cinematic;applyCamera();}],['grenade',blastCover],['shield',toggleShield]])el(id).onclick=handler;
  document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{const [dx,dz]=b.dataset.move.split(',').map(Number);move(dx,dz)});
@@ -322,7 +330,7 @@ async function start(){
  requestAnimationFrame(render);
 }
 function applyCamera(){
- if(cinematic){controls.target.set(0,current==='casino'?1.9:1,current==='gantry'?-1:0);camGoal=current==='gantry'?new THREE.Vector3(17,11,24):current==='casino'?new THREE.Vector3(29,23,37):new THREE.Vector3(22,14,27)}
+ if(cinematic){controls.target.set(0,current==='casino'?1.9:1,current==='gantry'?-1:0);camGoal=current==='gantry'?new THREE.Vector3(17,11,24):current==='casino'?new THREE.Vector3(17.7,14.1,23.2):new THREE.Vector3(22,14,27)}
  else{controls.target.set(0,0,0);camGoal=new THREE.Vector3(1,49,42)}
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
