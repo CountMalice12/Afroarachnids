@@ -3,6 +3,9 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {buildPalaceSector,PALACE_SECTORS} from './palace-world.js';
 import {makeEarth,makePalace,makeStars} from './orbital-assets.js';
+import {createTacticalCharacter} from './character-art.js';
+import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
+import {createCombatVFX} from './combat-vfx.js';
 
 const CAPTURE_MODE=new URLSearchParams(location.search).get('capture')==='1';
 const root=document.querySelector('#palace-app');
@@ -51,7 +54,7 @@ body{color:#dfedf6;background:#08111a;font-family:ui-monospace,Menlo,monospace}
 <aside id="cp-side">
 <h3>CRYSTAL PALACE • TEN INTERCONNECTED SECTORS</h3><div id="cp-floors"></div>
 <h3>TACTICAL MOVEMENT & INTERACTIONS</h3><div id="cp-actions">
-<button id="cp-fire">F • Fire / Damage Cover</button><button id="cp-door">E • Open Door</button>
+<button id="cp-fire">F • Fire / Damage Cover</button><button id="cp-door">E • Open Door</button><button id="cp-blast">G • Explosive Breach</button><button id="cp-shield">V • Cyber Shield</button>
 <button id="cp-end">End Round</button><button id="cp-camera">Follow Camera</button>
 <button id="cp-alert">Toggle Alarm</button><button id="cp-debug">Show Colliders</button>
 </div>
@@ -69,20 +72,14 @@ reflections,stars,earth,remotePalace,quality='balanced',alertOn=false,followCame
 const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
 const state={floor:'CP-01',round:1,action:1,move:8,hp:55,max:55,security:0,shooting:0,enemyHP:42};
 const lTmp=new THREE.Vector3(), targetPos=new THREE.Vector3();
-let savedProgress=new Map(),movementGoal=null,lastMoveAt=0,lastFrame=0,frames=0,lastFPSAt=0,trackObjects=[];
+let savedProgress=new Map(),movementGoal=null,lastMoveAt=0,lastFrame=0,frames=0,lastFPSAt=0,trackObjects=[],destruction=null,vfx=null,shields=[],scorches=[],movementPulse=0;
 function writeLog(t,level=''){const n=document.createElement('div');n.textContent='› '+t;n.style.color=level==='bad'?'#fa8594':level==='good'?'#8bf1b9':'#aacbd5';$('log').prepend(n)}
 function toast(msg,bad=false){$('toast').textContent=msg;$('toast').style.color=bad?'#ff93a5':'#9eeeff';$('toast').style.opacity='1';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.opacity='0',1400)}
 function body(x,z,mat){
- const g=new THREE.Group(),armor=new THREE.MeshStandardMaterial({color:mat,roughness:.25,metalness:.64,emissive:mat,emissiveIntensity:.15});
- const shell=new THREE.Mesh(new THREE.CapsuleGeometry(.42,1.06,6,16),armor);shell.position.y=1.1;g.add(shell);
- const chest=new THREE.Mesh(new THREE.BoxGeometry(.78,.48,.39),armor);chest.position.y=1.35;g.add(chest);
- const visor=new THREE.Mesh(new THREE.SphereGeometry(.22,20,12),new THREE.MeshStandardMaterial({color:0x113a47,emissive:0x16849d,emissiveIntensity:.4,metalness:.8,roughness:.18}));
- visor.position.set(0,1.92,-.27);g.add(visor);
- for(const s of [-1,1]){const arm=new THREE.Mesh(new THREE.CylinderGeometry(.12,.15,.8,12),armor);arm.position.set(s*.57,1.25,0);g.add(arm)}
- const halo=new THREE.Mesh(new THREE.RingGeometry(.51,.61,32),new THREE.MeshBasicMaterial({color:mat,side:THREE.DoubleSide,transparent:true,opacity:.75}));halo.position.y=.035;halo.rotation.x=-Math.PI/2;g.add(halo);
- g.position.set(x,0,z);return g;
+ return createTacticalCharacter(mat===0x39cbf2?'media':'security',[x,0,z]);
 }
-function setup(){
+
+async function setup(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x08101b);
  camera=new THREE.PerspectiveCamera(52,1,.1,2500);
  camera.position.set(18,18,29);
@@ -98,18 +95,25 @@ function setup(){
  sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;
  sun.shadow.mapSize.set(1536,1536);sun.shadow.bias=-.00018;scene.add(sun);
  stars=makeStars(THREE);scene.add(stars);
+ await prepareDestructionPhysics();
+ vfx=createCombatVFX(scene,{quality:CAPTURE_MODE?'mobile':'balanced'});
+ destruction=createDestructionPhysics({scene,
+   onDestroyed:(r,{position,stain})=>{scorches.push(stain);vfx.explosion(position,{radius:2.8,space:state.floor==='CP-10'});writeLog('PHYSICS: '+r.name+' shattered, LOS and collision released','good');},
+   onImpact:(p)=>vfx.impact(p),
+   onExplosion:(p,e)=>{vfx.explosion(p,{radius:e.radius,space:state.floor==='CP-10'});writeLog('Explosive breach: '+e.destroyed+' cover items shattered','good');}
+ });
  const ids=floorNames;
  for(let i=0;i<ids.length;i++){
   const id=ids[i],b=document.createElement('button');b.id='cp-btn-'+id;b.textContent=id+' '+PALACE_SECTORS[id].name;
   b.onclick=()=>loadFloor(id);$('floors').append(b)
  }
- for(const [id,fn] of [['fire',shoot],['door',openDoor],['end',endTurn],['camera',()=>{followCamera=!followCamera;toast(followCamera?'CAMERA FOLLOW':'CAMERA FREE')}],['alert',()=>{alertOn=!alertOn;state.security+=alertOn?1:0;toast(alertOn?'STATION ALARM ACTIVE':'ALARM DISABLED',alertOn)}],['debug',()=>{debugOn=!debugOn;updateDebug();toast(debugOn?'COLLIDERS VISIBLE':'COLLIDERS HIDDEN')}]])$(id).onclick=fn;
+ for(const [id,fn] of [['fire',shoot],['door',openDoor],['end',endTurn],['camera',()=>{followCamera=!followCamera;toast(followCamera?'CAMERA FOLLOW':'CAMERA FREE')}],['alert',()=>{alertOn=!alertOn;state.security+=alertOn?1:0;toast(alertOn?'STATION ALARM ACTIVE':'ALARM DISABLED',alertOn)}],['debug',()=>{debugOn=!debugOn;updateDebug();toast(debugOn?'COLLIDERS VISIBLE':'COLLIDERS HIDDEN')}],['blast',blastCover],['shield',toggleShields]])$(id).onclick=fn;
  $('quality').onchange=e=>{quality=e.target.value;resize()};
  document.querySelectorAll('[data-move]').forEach(button=>button.onclick=()=>{const [dx,dz]=button.dataset.move.split(',').map(Number);moveRequest(dx,dz)});
  document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
   const k=e.key.toLowerCase();if(['w','a','s','d'].includes(k)){e.preventDefault();moveRequest(k==='a'?-1:k==='d'?1:0,k==='w'?-1:k==='s'?1:0)}
-  if(k==='f')shoot();if(k==='e')openDoor();
+  if(k==='f')shoot();if(k==='e')openDoor();if(k==='g')blastCover();if(k==='v')toggleShields();
  });
  let pt=null;renderer.domElement.addEventListener('pointerdown',e=>{pt={x:e.clientX,y:e.clientY}});
  renderer.domElement.addEventListener('pointerup',e=>{
@@ -140,12 +144,16 @@ function disposeWorld(){
 function loadFloor(id){
  if(!PALACE_SECTORS[id])return;
  if(world)savedProgress.set(state.floor,{pos:avatar.position.clone(),hp:state.hp,round:state.round});
+ if(destruction)destruction.registerScene([]);if(vfx)vfx.reset();for(const a of scorches)scene.remove(a);scorches.length=0;
  disposeWorld();
  state.floor=id;state.action=1;state.move=8;state.enemyHP=42;window.d4Cover=null;
  world=buildPalaceSector(THREE,id);scene.add(world.group);
+ destruction.setGravity(id==='CP-09'||id==='CP-10'?0:-8.5);destruction.registerScene(world.solids);
+ shields.length=0;
  scene.background=new THREE.Color(world.background);
  avatar=body(-3,13,0x39cbf2);scene.add(avatar);
  enemy=body(12,-9,0xf15d71);scene.add(enemy);
+ shields.push(vfx.addShield(avatar,0x65dbf5,1.22));
  const saved=savedProgress.get(id);
  if(saved){avatar.position.copy(saved.pos);state.round=saved.round;state.hp=saved.hp}
  camera.position.set(18,19,32);controls.target.set(0,0,0);controls.update();
@@ -175,7 +183,7 @@ function moveToward(x,z){
  if(dist<.1)return;
  if(dist>state.move){vec.setLength(state.move);x=from.x+vec.x;z=from.z+vec.z}
  if(blockedStep(x,z,from.x,from.z)){toast('MOVEMENT BLOCKED BY 3D COLLIDER',true);writeLog('Move rejected: physical obstacle','bad');return}
- const spent=Math.ceil(Math.hypot(x-from.x,z-from.z));state.move=Math.max(0,state.move-spent);movementGoal=new THREE.Vector3(x,0,z);
+ const spent=Math.ceil(Math.hypot(x-from.x,z-from.z));state.move=Math.max(0,state.move-spent);movementGoal=new THREE.Vector3(x,0,z);movementPulse=1;
  writeLog('Move '+spent+'m through navigable 3D floor');updateStatus();
 }
 function moveRequest(dx,dz){moveToward(avatar.position.x+dx*1.6,avatar.position.z+dz*1.6)}
@@ -196,20 +204,34 @@ function shoot(){
  if(state.enemyHP<=0){toast('NO ACTIVE HOSTILE');return}
  const r=rayShot();
  if(r.length>36){toast('TARGET OUT OF RANGE',true);return}
- state.action=0;state.shooting+=1;
+ state.action=0;state.shooting+=1;avatar.userData.fire?.();vfx.muzzle(avatar.position.clone().add(new THREE.Vector3(0,1.3,-.6)));
  if(r.hit){
   const s=r.hit;
   if(s.hp>0){
-   s.hp=Math.max(0,s.hp-12);toast('COVER ABSORBED THE SHOT',true);
+   const result=destruction.damage(s,12,{point:new THREE.Vector3(s.x,1.3,s.z),impulse:32});
+   toast(result.destroyed?'COVER SHATTERED':'COVER ABSORBED THE SHOT',true);
    writeLog('Shot hits '+s.name+' for 12 damage. Cover '+s.hp+'/'+s.maxHP,'bad');
-   if(s.hp===0){s.active=false;s.obj.visible=false;
-    writeLog('COVER DESTROYED. LOS & movement automatically updated.','good')}
-  }else{toast('SOLID BULKHEAD BLOCKS FIRE',true);writeLog('Ballistics rejected: '+s.name,'bad')}
+  }else{toast('SOLID BULKHEAD BLOCKS FIRE',true);vfx.impact(new THREE.Vector3(s.x,1.2,s.z));writeLog('Ballistics rejected: '+s.name,'bad')}
  }else{
   state.enemyHP=Math.max(0,state.enemyHP-15);toast('HOSTILE HIT: 15');writeLog('Hostile takes 15 direct HP. '+state.enemyHP+' remains','good');
+  enemy.userData.hit?.();vfx.impact(enemy.position.clone().add(new THREE.Vector3(0,1.3,0)));
   if(state.enemyHP<=0)enemy.visible=false
  }
  updateDebug();updateStatus();
+}
+function blastCover(){
+ if(state.action<1){toast('ACTION ALREADY SPENT',true);return}
+ const objects=world.solids.filter(s=>s.active&&s.maxHP>0);
+ const selected=objects.sort((a,b)=>Math.hypot(a.x,a.z)-Math.hypot(b.x,b.z))[0];
+ const p=selected?new THREE.Vector3(selected.x,1.3,selected.z):new THREE.Vector3(0,1.3,0);
+ state.action=0;
+ const result=destruction.explosion(p,5.2,68,84,world.solids);
+ toast('EXPLOSIVE BREACH: '+result.destroyed+' COVER DESTROYED');
+ updateDebug();updateStatus();
+}
+function toggleShields(){
+ for(const shield of shields){shield.visible=!shield.visible;if(shield.visible)vfx.shieldHit(shield)}
+ toast(shields[0]?.visible?'CYBER SHIELDS ACTIVE':'SHIELDS DISABLED');
 }
 function openDoor(){
  if(state.action<1){toast('ACTION ALREADY USED',true);return}
@@ -273,6 +295,9 @@ function loop(now){
  if(followCamera){const target=avatar.position.clone().add(new THREE.Vector3(0,.5,0));controls.target.lerp(target,Math.min(1,dt*2.4))}
  if(world){world.lights.forEach((l,i)=>l.intensity=15+(Math.sin(now*.0018+i*2)*3)+((alertOn&&i%2===0)?5:0))}
  if(remotePalace)remotePalace.rotation.y+=dt*.018;
+ movementPulse=Math.max(0,movementPulse-dt*2);
+ avatar?.userData.animate?.(dt,movementPulse);enemy?.userData.animate?.(dt,.03);
+ destruction?.tick(dt);vfx?.tick(dt);
  controls.update();renderer.render(scene,camera);
 }
-try{setup()}catch(err){$('error').style.display='block';$('error').textContent='WebGL scene could not start: '+err.message+' . A hardware-accelerated browser is required.';console.error(err)}
+setup().catch(err=>{$('error').style.display='block';$('error').textContent='WebGL scene could not start: '+err.message+' . A hardware-accelerated browser is required.';console.error(err)})
