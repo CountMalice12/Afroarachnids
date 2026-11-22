@@ -24,7 +24,9 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
-          which ffmpeg
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
       - name: Start graphics lab and capture real 3D gameplay
         run: |
           npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/director4-record-vite.log 2>&1 &
@@ -37,9 +39,7 @@ jobs:
           name: director4-orbital-3d-gameplay-video
           path: |
             director4-graphics/test-artifacts/Director4_Orbital_Real3D_Gameplay.mp4
-            director4-graphics/test-artifacts/video/frame-0010.png
-            director4-graphics/test-artifacts/video/frame-0040.png
-            director4-graphics/test-artifacts/video/frame-0065.png
+            director4-graphics/test-artifacts/video/*.webm
           if-no-files-found: warn
       - name: Publish MP4 to feature branch for direct playback
         if: success()
