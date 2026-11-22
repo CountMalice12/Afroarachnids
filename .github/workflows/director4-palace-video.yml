@@ -1,0 +1,53 @@
+name: Record Crystal Palace 3D Floor Walkthrough
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - '.github/workflows/director4-palace-video.yml'
+      - 'director4-graphics/tests/record-palace.mjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies, Chromium and FFmpeg
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Start Palace 3D lab and record real footage
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/d4-palace-vite.log 2>&1 &
+          sleep 6
+          timeout 400s node tests/record-palace.mjs
+      - name: Archive original frames and finished MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director4-palace-10-floor-3d-video
+          path: |
+            director4-graphics/test-artifacts/Director4_CrystalPalace_10Sector_Real3D.mp4
+            director4-graphics/test-artifacts/palace/*.webm
+          if-no-files-found: ignore
+      - name: Commit finished video to feature branch
+        if: success()
+        run: |
+          mkdir -p demo
+          cp test-artifacts/Director4_CrystalPalace_10Sector_Real3D.mp4 demo/Director4_CrystalPalace_10Sector_Real3D.mp4
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/demo/Director4_CrystalPalace_10Sector_Real3D.mp4
+          git commit -m 'Add real-time modeled Crystal Palace floors gameplay recording'
+          git push origin HEAD:feature/director4-graphics-toolkit
