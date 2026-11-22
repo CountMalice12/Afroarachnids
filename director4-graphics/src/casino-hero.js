@@ -94,8 +94,8 @@ function stairRibbon(xStart,zStart,upZ,steps,width=4.7,height=4.6){
   }
  }
 }
-function sofa(cx,cz,rot=0,scale=1){
- const g=new THREE.Group();g.position.set(cx,0,cz);g.rotation.y=rot;g.scale.setScalar(scale);root.add(g);
+function sofa(cx,cz,rot=0,scale=1,y=0){
+ const g=new THREE.Group();g.position.set(cx,y,cz);g.rotation.y=rot;g.scale.setScalar(scale);root.add(g);
  rect(0,.61,0,2.55,.54,.88,velvet,.17,g);
  rect(0,1.16,.36,2.6,.77,.24,burgundy,.11,g);
  for(const s of [-1,1]){
@@ -245,6 +245,13 @@ function arcWindow(addLight){
 function balcony(){
  // Rear/left two-tier floating mezzanines.
  const w1=22,d1=9.0;
+ // Coiffured ceiling panels anchor the left luxury mezzanine. They never cover
+ // the atrium's central top-down tactical camera.
+ for(let x=-21;x<=-2;x+=3.2){
+   rect(x,11.72,-12.6,2.83,.21,4.25,black,.04);
+   rect(x,11.53,-12.6,2.61,.045,3.9,linen,.017);
+   for(const s of [-1,1])rect(x+s*1.24,11.49,-12.6,.047,.04,3.7,roseGold,.009);
+ }
  rect(-12.0,4.65,-9.7,w1,.54,d1,black,.08);
  rect(-12.0,4.99,-9.7,w1,.10,d1-.16,gold,.03);
  rect(-12.0,5.07,-9.7,w1-.3,.035,d1-.4,linen,.013);
@@ -258,7 +265,7 @@ function balcony(){
   const x=-21+i*2.3;
   rect(x,4.35,-5.15,.14,.57,.20,gold);
   rect(x,4.37,-5.12,.09,.48,.08,roseGold,.009);
-  sofa(x, -11.0,Math.PI, .78)
+  sofa(x, -11.0,Math.PI, .78, 5.08)
  }
  // Luxury staircase left foreground, visible risers and railing.
  stairRibbon(-17,7,-1,17,4.5,4.6);
