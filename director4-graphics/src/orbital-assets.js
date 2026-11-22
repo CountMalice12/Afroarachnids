@@ -17,7 +17,35 @@ function tube(THREE,parent,material,from,to,radius=0.07,segments=12){
  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),q.sub(p).normalize());
  m.castShadow=true;parent.add(m);return m;
 }
-const metal=(T,color,roughness=.32,metalness=.85)=>new T.MeshPhysicalMaterial({color,metalness,roughness,clearcoat:.28,clearcoatRoughness:.16});
+/* Original procedural basecolor, tangent normal, and roughness texture maps. */
+let cachedMaps;
+function surfaceMaps(T){
+ if(cachedMaps)return cachedMaps;
+ const n=512,pix=n*n,albedo=new Uint8Array(pix*4),normal=new Uint8Array(pix*4),
+ rough=new Uint8Array(pix*4),h=new Float32Array(pix),rnd=rng(180932);
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const seam=Math.min(x%128,128-x%128,y%128,128-y%128)<2;
+  h[y*n+x]=(rnd()-.5)*.055-(seam?.58:0);
+ }
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+  const i=y*n+x,j=i*4,dx=h[y*n+(x+1)%n]-h[y*n+(x+n-1)%n],
+   dy=h[((y+1)%n)*n+x]-h[((y+n-1)%n)*n+x],l=Math.hypot(dx,dy,1);
+  const c=clamp(Math.round(221+h[i]*57+(rnd()-.5)*17),0,255);
+  albedo[j]=c-7;albedo[j+1]=c-3;albedo[j+2]=c;albedo[j+3]=255;
+  normal[j]=127.5-dx*127.5/l;normal[j+1]=127.5-dy*127.5/l;normal[j+2]=127.5+127.5/l;normal[j+3]=255;
+  const r=clamp(Math.round(125+(rnd()-.5)*19-h[i]*40),10,250);
+  rough[j]=r;rough[j+1]=r;rough[j+2]=r;rough[j+3]=255;
+ }
+ const tex=(bytes,srgb=false)=>{const t=new T.DataTexture(bytes,n,n,T.RGBAFormat);t.wrapS=t.wrapT=T.RepeatWrapping;
+  t.magFilter=T.LinearFilter;t.minFilter=T.LinearMipmapLinearFilter;t.generateMipmaps=true;
+  if(srgb)t.colorSpace=T.SRGBColorSpace;t.anisotropy=8;t.needsUpdate=true;return t;};
+ cachedMaps={map:tex(albedo,true),normalMap:tex(normal),roughnessMap:tex(rough)};return cachedMaps;
+}
+const metal=(T,color,roughness=.32,metalness=.85)=>{
+ const maps=surfaceMaps(T);return new T.MeshPhysicalMaterial({
+ color,metalness,roughness,clearcoat:.28,clearcoatRoughness:.16,
+ map:maps.map,normalMap:maps.normalMap,normalScale:new T.Vector2(.5,.5),roughnessMap:maps.roughnessMap});
+};
 const emissive=(T,color,intensity=3)=>new T.MeshStandardMaterial({color:0x101827,metalness:.4,roughness:.3,emissive:color,emissiveIntensity:intensity,toneMapped:false});
 export function makeShip(THREE,style='crew'){
  const enemy=style!=='crew',heavy=style==='heavy';
