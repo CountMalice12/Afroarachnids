@@ -28,6 +28,9 @@ jobs:
           node --check src/director-bridge.js
           node --check src/orbital-assets.js
           node --check src/flight-lab.js
+          node --check src/palace-world.js
+          node --check src/palace-lab.js
+          node --check src/palace-textures.js
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Bundle both tactical and orbital lab
@@ -36,6 +39,7 @@ jobs:
         run: |
           test -f dist/index.html
           test -f dist/flight.html
+          test -f dist/palace.html
   browser-smoke:
     needs: build
     runs-on: ubuntu-latest
