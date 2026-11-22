@@ -81,3 +81,37 @@ This pass includes:
 
 **Deployment:** Only the connected GitHub graphics-toolkit branch is modified, not the existing published Director 4.0 website. The ten-floor map atlas and space flight modules remain separate until the real Director source repository is available.
 
+
+## Director 4.0 Physics / Shader VFX / Character Art Expansion
+
+Playable in **`fidelity.html`** (three showcase environments) and the 10-sector **`palace.html`** atlas:
+
+- **Breakable cover, not fake disappearance:** the cover's current HP belongs to the original Director cover record. Rapier receives a matching fixed collider while the item is intact; when HP reaches zero, that collider is removed and 3D tetrahedral fragments receive physics impulses. The same record simultaneously leaves the movement and line-of-sight obstacle set.
+- **Environment-specific gravity:** the exterior EVA Gantry and zero-G spindle simulate free-moving rigid debris, while pressurized floors use downward gravity and friction. The dynamics are simplified, **not a general structural engineering or gas depressurization simulator**.
+- **Explosive breaches:** press **G** or click **Explosive Breach** after readying an action. Explosions deal distance-falloff cover damage, spawn GPU visual bursts and push already detached fragments with Rapier impulses. This is a prototype action, not a complete RED attack-roll / blast DV implementation.
+- **Shader VFX:** fragment-shader sparks, emissive energy shields, volumetric-style particles, glowing blast rings and temporary impact lights. Press **V** to preview cyberware shields.
+- **Characters:** the Media, Medic, Solo and opposing security officer now use original, articulated 3D models with multiple armor layers, reflective chrome, visor glass, role-specific devices, weapons and basic motion/recoil.
+- **Shared materials:** all ten Palace map sectors accept the local photo-scanned CC0 PBR metal/marble bank; the ten-floor atlas loads the same HDRI reflection probes as the showcase when hardware resources permit.
+- **Separation of duties:** the graphics viewer and this physics demonstration still do not have authority to modify the live Director 4.0 campaign save, actual weapons, NPC HP, turn ledger, or player sheet from the deployed website.
+
+### Destruction details
+
+The public `src/destruction-physics.js` exports `prepareDestructionPhysics` and `createDestructionPhysics`.
+`registerScene` registers intact breakable cover and removes the previous map's bodies. `damage` reduces HP and destroys the collider and geometry when exhausted. `explosion` damages multiple registered items and applies impulses to loose bodies. `tick` advances the fixed 60Hz Rapier physics and updates visible debris. Fragment culling limits object count and helps avoid physics overload on mobile. **Non-breakable primary station bulkheads remain solid**.
+
+`src/combat-vfx.js` manages temporary impact, muzzle, burst, shield and shockwave effects; shader particles are drawn and updated independently of the Rapier bodies. `src/character-art.js` creates the four stylized 3D actor classes. All are original, custom source files.
+
+### Verification
+
+```bash
+cd director4-graphics
+npm install
+node tests/destruction.unit.mjs
+npm run build
+npm run dev
+# Open /fidelity.html or /palace.html
+```
+
+The action/physics modules have a deterministic unit test. Browser smoke tests require hardware-accelerated WebGL (or slow software emulation). Rendering the 720p capture on a GitHub-hosted software renderer is a **visual demonstration**, not an actual-device FPS benchmark.
+
+The full Director 4.0 site repository is not connected to this GitHub account; the changes here are confined to the graphics toolkit feature branch pending integration with the real deployed application.
