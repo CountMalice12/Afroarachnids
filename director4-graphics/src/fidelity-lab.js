@@ -9,6 +9,7 @@ import {makeEarth,makeStars,makeShip} from './orbital-assets.js';
 import {generatePalaceMaterials} from './palace-textures.js';
 import {loadScannedMaterials,remapAuthoredHullMaterials} from './scanned-materials.js';
 import {dressExteriorGantry,dressLuxuryCasino,dressDockingCore} from './cinematic-dressing.js';
+import {buildCasinoHero} from './casino-hero.js';
 import {createTacticalCharacter} from './character-art.js';
 import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
 import {createCombatVFX} from './combat-vfx.js';
@@ -229,33 +230,17 @@ function buildGantry(){
  dressExteriorGantry(roomGroup,{high:quality!=='mobile'});
 }
 function buildCasino(){
- lighting('casino');const marble=M.marble;
- box(0,-.48,0,46,.8,32,marble,false);
- const bulks=[];for(let x of [-20,-15,-10,10,15,20])bulks.push(matrix(x,0,-15));
- batch('pressure_bulkhead_5m',bulks);
- const windows=[];for(let x=-18;x<=18;x+=5)windows.push(matrix(x,0,-15));
- batch('observation_glazing_5m',windows);
- // Authored crystal feature and genuine curved balconies.
- const gold=M.gold,basin=new THREE.Mesh(new THREE.CylinderGeometry(4.0,4.2,.42,96),gold);basin.position.y=.35;roomGroup.add(basin);
- const water=new THREE.Mesh(new THREE.CylinderGeometry(3.67,3.67,.08,96),M.glass);water.position.y=.6;roomGroup.add(water);
- for(let k=0;k<31;k++){const a=k*2.399,r=.3+k%7*.38,h=1.5+k%7*.4;
-  const crystal=new THREE.Mesh(new THREE.ConeGeometry(.26+k%4*.12,h,7),M.violet);
-  crystal.position.set(Math.sin(a)*r,.55+h/2,Math.cos(a)*r);crystal.rotation.z=Math.cos(a)*.14;roomGroup.add(crystal)}
- for(const dir of [-1,1]){
-  const geometry=new THREE.RingGeometry(5.3,9.2,96,1,dir<0?.12:Math.PI*1.1,Math.PI*.79);
-  const balcony=new THREE.Mesh(geometry,M.gold);balcony.rotation.x=-Math.PI/2;balcony.position.set(dir*13,3.7,-.5);roomGroup.add(balcony);
-  for(let j=0;j<11;j++){box(dir*16+(j-5)*.1,.25+j*.23,10-j*.56,4,.25,.6,j%2?M.dark:M.gold)}
- }
- for(let x of [-19,-10,10,19]){cyl([x,0,-7],[x,7,-7],.31,M.gold);box(x,6.25,-7,1.9,.2,1.9,M.violet,false)}
- const overhead=[];for(let x of [-18,-6,6,18])overhead.push(matrix(x,6.7,-12));batch('gantry_truss_6m',overhead,roomGroup,false);
- const consoles=[];for(const [x,z] of [[-15,-9],[15,-9],[-15,8],[15,8],[-5,11],[5,11]])consoles.push(matrix(x,0,z));
- batch('gantry_service_console',consoles);
- for(const [x,z] of [[-15,-9],[15,-9],[-15,8],[15,8],[-5,11],[5,11]])
-  collider(x,z,2,1.3,'CASINO CONSOLE',12);
- for(let x=-18;x<=18;x+=6)box(x,5.6,-9,4.3,.1,.5,M.violet,false);
- // Sky through full glass wall: actual 3D earth.
- const earth=makeEarthPhoto();earth.position.set(80,-205,-380);roomGroup.add(earth);
- dressLuxuryCasino(roomGroup,{high:quality!=='mobile'});
+ lighting('casino');
+ const details=buildCasinoHero({
+   group:roomGroup,
+   marble:M.marble,
+   addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
+   addCollision:(x,z,w,d,name,hp=0,physicalMesh=null)=>collider(x,z,w,d,name,hp,physicalMesh),
+   earth:makeEarthPhoto,
+   high:!cap&&quality!=='mobile'
+ });
+ addLog('Rebuilt photorealism-oriented Casino: two-level mezzanine, 17-step grand staircase, custom red-velvet gaming tables, curved bar and botanical architecture.');
+ addLog('Casino art inventory: '+details.gamingTables+' tables, '+details.plants+' architectural trees, gold inlays, panoramic observation windows.');
 }
 function buildDock(){
  lighting('gantry');buildSky();const tiles=[];
@@ -281,7 +266,7 @@ async function start(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
- camera=new THREE.PerspectiveCamera(42,1,.15,1600);camera.position.set(19,11,25);
+ camera=new THREE.PerspectiveCamera(51,1,.15,1600);camera.position.set(29,23,37);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,1.25));
@@ -333,11 +318,11 @@ async function start(){
   if(k==='f')shoot();if(k==='e')openAirlock();if(k==='g')blastCover();if(k==='v')toggleShield();});
  el('quality').onchange=e=>{quality=e.target.value;resize()};
  new ResizeObserver(resize).observe(stage);
- await loadScene('gantry');resize();el('loading').remove();
+ await loadScene('casino');resize();el('loading').remove();
  requestAnimationFrame(render);
 }
 function applyCamera(){
- if(cinematic){controls.target.set(0,1,current==='gantry'?-1:0);camGoal=current==='gantry'?new THREE.Vector3(17,11,24):current==='casino'?new THREE.Vector3(19,13,27):new THREE.Vector3(22,14,27)}
+ if(cinematic){controls.target.set(0,current==='casino'?1.9:1,current==='gantry'?-1:0);camGoal=current==='gantry'?new THREE.Vector3(17,11,24):current==='casino'?new THREE.Vector3(29,23,37):new THREE.Vector3(22,14,27)}
  else{controls.target.set(0,0,0);camGoal=new THREE.Vector3(1,49,42)}
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
