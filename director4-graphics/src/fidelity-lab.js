@@ -52,7 +52,7 @@ body{background:#050e19;color:#dff5fb;font-family:Inter,system-ui,sans-serif;mar
 <div class="fd-hud" id="fd-crosshair">⌖</div><div class="fd-hud" id="fd-toast"></div><div class="fd-hud" id="fd-alert">SECURITY ALERT / LEVEL 03</div>
 </main>
 <aside id="fd-panel"><h3>PLAYABLE 3D ENVIRONMENT</h3>
-<div id="fd-scenebuttons"><button data-scene="gantry" class="active">EXTERIOR GANTRY • CP-10</button><button data-scene="casino">STARBRUST CASINO • CP-03</button><button data-scene="dock">DOCKING CORE • CP-01</button></div>
+<div id="fd-scenebuttons"><button data-scene="gantry" class="active">EXTERIOR GANTRY • CP-10</button><button data-scene="casino">STARBURST CASINO • CP-03</button><button data-scene="dock">DOCKING CORE • CP-01</button></div>
 <h3>TACTICAL CONTROLS</h3><div id="fd-actionbuttons">
 <button id="fd-scan">Scan 3D space</button><button id="fd-shoot">Fire / cover</button>
 <button id="fd-open">Open airlock</button><button id="fd-alarm">Security alarm</button>
@@ -284,7 +284,7 @@ async function loadScene(mode){
  if(roomGroup)scene.remove(roomGroup);
  roomGroup=new THREE.Group();scene.add(roomGroup);
  if(mode==='gantry')buildGantry();else if(mode==='casino')buildCasino();else buildDock();
- crew.push(addCrew(-15,8),addCrew(-16,5),addCrew(-18,7));
+ addCrew(-15,8);addCrew(-16,5);addCrew(-18,7);
  enemy=addCrew(8,-4);enemy.children[0].material=mkMat(0xa33b50,.47,.4,{emissive:0x4e0a21,emissiveIntensity:.5});
  // Four squad members share the same authored physical map, but this is a test encounter.
  moves=8;action=true;enemyHP=42;round=1;playerHP=55;
