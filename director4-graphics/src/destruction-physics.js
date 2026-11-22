@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import RAPIER from '@dimforge/rapier3d-compat';
 
 /**
@@ -21,7 +22,11 @@ export function createDestructionPhysics({scene,gravity=-8.0,onDestroyed=()=>{},
  const staticBody=world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0,-.67,0));
  const floor=world.createCollider(RAPIER.ColliderDesc.cuboid(25,.48,18).setFriction(.9),staticBody);
  const active=new Map(),fragments=[];
- const glassMat=new THREE.MeshPhysicalMaterial({color:0x9dc9da,metalness:.77,roughness:.28,side:THREE.DoubleSide});
+ const fragmentMats=[
+  new THREE.MeshPhysicalMaterial({color:0x526d83,metalness:.9,roughness:.31,clearcoat:.15}),
+  new THREE.MeshPhysicalMaterial({color:0x172a39,metalness:.76,roughness:.54,clearcoat:.1}),
+  new THREE.MeshPhysicalMaterial({color:0xaa9778,metalness:.88,roughness:.3,clearcoat:.18})
+ ];
  const scorchMat=new THREE.MeshBasicMaterial({color:0x121015,transparent:true,opacity:.53,depthWrite:false});
  const rand=(seed)=>{let s=seed>>>0;return ()=>((s=Math.imul(s,1664525)+1013904223>>>0)/4294967296)};
  const fixedDt=1/60;
@@ -52,18 +57,20 @@ export function createDestructionPhysics({scene,gravity=-8.0,onDestroyed=()=>{},
   if(state?.body)world.removeRigidBody(state.body);
   active.delete(record);
   const rng=rand(++seed*131+Math.abs(Math.round(record.x*37+record.z*57)));
-  const center=new THREE.Vector3(record.x,.78,record.z);
+  const center=new THREE.Vector3(record.x,record.y??.78,record.z);
   const hit=point instanceof THREE.Vector3?point:center;
   const n=Math.min(16,maxFragments-fragments.length);
   for(let i=0;i<n;i++){
-   const scale=.10+rng()*.31;
-   const geometry=new THREE.TetrahedronGeometry(scale,0);
-   const m=new THREE.Mesh(geometry,glassMat);
+   const w=.16+rng()*.42,h=.055+rng()*.13,d=.15+rng()*.55;
+   // Hard-surface steel splinters and plate fragments have bevels and physically
+   // matched cuboid hulls, unlike fake low-poly tetrahedral confetti.
+   const geometry=new RoundedBoxGeometry(w,h,d,2,.018);
+   const m=new THREE.Mesh(geometry,fragmentMats[i%fragmentMats.length]);
    m.castShadow=true;m.receiveShadow=true;
-   const cx=record.x+(rng()-.5)*record.w*.85,cy=.53+rng()*1.0,cz=record.z+(rng()-.5)*record.d*.85;
+   const cx=record.x+(rng()-.5)*record.w*.85,cy=(record.y??.53)+rng()*.65,cz=record.z+(rng()-.5)*record.d*.85;
    const body=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(cx,cy,cz)
       .setLinearDamping(currentGravity===0?.018:.18).setAngularDamping(.34).setCcdEnabled(true));
-   world.createCollider(RAPIER.ColliderDesc.ball(scale*.66).setDensity(.7).setFriction(.72).setRestitution(.28),body);
+   world.createCollider(RAPIER.ColliderDesc.cuboid(w*.5,h*.5,d*.5).setDensity(.8).setFriction(.72).setRestitution(.24),body);
    const direction=new THREE.Vector3(cx-hit.x+(rng()-.5)*.4,(rng()*.9)+.2,cz-hit.z+(rng()-.5)*.4).normalize();
    body.applyImpulse({x:direction.x*(impulse/Math.max(n,1))*(.5+rng()),
                       y:direction.y*(impulse/Math.max(n,1))*(.5+rng()),
