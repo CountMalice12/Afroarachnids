@@ -12,7 +12,9 @@ try {
  await page.goto('http://127.0.0.1:4173/fidelity.html?capture=1',{waitUntil:'domcontentloaded',timeout:40000});
  await page.locator('#fd-viewport canvas').waitFor({timeout:40000});
  await page.locator('#fd-loading').waitFor({state:'detached',timeout:120000});
- assert.match(await page.locator('#fd-zone-title').innerText(),/EXTERIOR GANTRY/);
+ assert.match(await page.locator('#fd-zone-title').innerText(),/STARBURST CASINO/);
+ assert.match(await page.locator('#fd-log').innerText(),/Architectural envelope/,
+   'Fully modeled Casino enclosing walls and windows are missing');
  const entry=await page.locator('#fd-log').innerText();assert.match(entry,/Loaded 9 original GLBs/);
  await page.evaluate(s=>{const e=document.querySelector(s);if(!e)throw Error('Missing '+s);e.click()},"#fd-scan");
  await page.evaluate(s=>{const e=document.querySelector(s);if(!e)throw Error('Missing '+s);e.click()},"#fd-shoot");
