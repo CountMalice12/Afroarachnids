@@ -37,7 +37,9 @@ try {
   await page.locator('#d4-rail').click();
   assert.equal(errors.length,0,'Browser console exceptions: '+errors.join(' | '));
   console.log('PASS: Three.js WebGL scene startup, 3 maps, thrust, targeting, canvas resize');
-  // Release the previous WebGL context before allocating the mobile renderer.\n  await page.close();await context.close();\n  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  // Release the previous WebGL context before allocating the mobile renderer.
+  await page.close();await context.close();
+  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   const mpage=await mobile.newPage();
   mpage.on('pageerror',err=>errors.push(err.message));
   await mpage.goto(base,{waitUntil:'commit',timeout:60000});
