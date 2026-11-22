@@ -1,0 +1,38 @@
+name: Director 4.0 Graphics Toolkit CI
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/**'
+      - '.github/workflows/director4-graphics.yml'
+  pull_request:
+    paths:
+      - 'director4-graphics/**'
+      - '.github/workflows/director4-graphics.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript module syntax
+        run: |
+          node --check src/main.js
+          node --check src/director-bridge.js
+          node --check src/orbital-assets.js
+          node --check src/flight-lab.js
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bundle both tactical and orbital lab
+        run: npm run build
+      - name: Check Vite output includes both entry points
+        run: |
+          test -f dist/index.html
+          test -f dist/flight.html
