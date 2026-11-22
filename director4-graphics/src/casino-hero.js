@@ -125,9 +125,10 @@ function gamingTable(cx,cz,rot=0,r=2.2){
  }
  for(let i=0;i<24;i++){
   const a=i*TAU/24,x=Math.cos(a)*r*.90,z=Math.sin(a)*r*.61;
-  const chip=disc(x,1.165,z,.072,.018,i%3===0?roseGold:i%3===1?violet:blue,10,g);
+  disc(x,1.165,z,.072,.018,i%3===0?roseGold:i%3===1?violet:blue,10,g);
  }
- inlayCircle(cx,cz,r+1.5,goldDark)
+ inlayCircle(cx,cz,r+1.5,goldDark);
+ return g;
 }
 function barCounter(){
  const cx=17,cz=9,R=5.4;
@@ -317,7 +318,7 @@ export function buildCasinoHero({group,marble,addLight,addCollision,earth,high=t
   [-14,-1,Math.PI*.09,2.0],[12,-8,Math.PI*.18,2.0],
   [-13,10,Math.PI*.10,1.85],[8,10,Math.PI*.30,1.85],[17,0,Math.PI*.10,1.8]
  ];
- for(const [x,z,rot,r] of gaming){gamingTable(x,z,rot,r);addCollision(x,z,2.5,2,'Gaming table',22);}
+ for(const [x,z,rot,r] of gaming){const table=gamingTable(x,z,rot,r);addCollision(x,z,2.5,2,'Gaming table',22,table);}
  barCounter();addCollision(18,10,8,4,'Luxury bar counter',0);
  for(const [x,z,r] of [[-8,6,.2],[-17,4,.4],[-4,-10,.1],[4,-11,.15],[14,5,.9]]){
   sofa(x,z,r,1.05)
