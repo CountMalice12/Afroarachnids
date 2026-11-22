@@ -13,6 +13,7 @@ import {dressExteriorGantry,dressLuxuryCasino,dressDockingCore} from './cinemati
 import {buildCasinoHero} from './casino-hero.js';
 import {surroundCasino} from './casino-enclosure.js';
 import {loadCasinoHeroProps,dressCasinoWithScans} from './casino-hero-props.js';
+import {batchLuxuryArchitecture} from './luxury-mesh-batching.js';
 import {createTacticalCharacter} from './character-art.js';
 import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
 import {createCombatVFX} from './combat-vfx.js';
