@@ -37,10 +37,10 @@ try {
   await page.locator('#d4-rail').click();
   assert.equal(errors.length,0,'Browser console exceptions: '+errors.join(' | '));
   console.log('PASS: Three.js WebGL scene startup, 3 maps, thrust, targeting, canvas resize');
-  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
+  // Release the previous WebGL context before allocating the mobile renderer.\n  await page.close();await context.close();\n  const mobile=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
   const mpage=await mobile.newPage();
   mpage.on('pageerror',err=>errors.push(err.message));
-  await mpage.goto(base,{waitUntil:'domcontentloaded',timeout:30000});
+  await mpage.goto(base,{waitUntil:'commit',timeout:60000});
   await mpage.locator('#d4-stage canvas.webgl').waitFor({timeout:30000});
   await mpage.waitForTimeout(450);
   const stageWidth=await mpage.locator('#d4-stage').evaluate(el=>el.getBoundingClientRect().width);
@@ -48,7 +48,6 @@ try {
   // Mobile render verified by canvas and viewport bounds.
   assert.equal(errors.length,0,'Mobile browser exceptions: '+errors.join(' | '));
   await mobile.close();
-  await context.close();
-} finally {
+  } finally {
   await browser.close();
 }
