@@ -17,12 +17,20 @@ try {
  await page.locator('#fd-scan').click();
  await page.locator('#fd-shoot').click();
  await page.locator('#fd-end').click();
+ await page.locator('#fd-grenade').click();
+ await page.waitForTimeout(180);
+ const details=await page.locator('#fd-dv').innerText();
+ assert.match(details,/DEBRIS/,'Rapier debris meter missing after explosion');
+ assert.ok(Number(details.match(/(\\d+) DEBRIS/)?.[1]||0)>0,'Blast did not physically fracture a crate');
+ await page.locator('#fd-shield').click();
+ assert.match(await page.locator('#fd-toast').innerText(),/SHIELDS ACTIVE/);
+ console.log('Physics: '+details);
  await page.locator('[data-scene="casino"]').click();
  assert.match(await page.locator('#fd-zone-title').innerText(),/CASINO/);
  await page.locator('[data-move="0,-1"]').click();
  await page.locator('[data-scene="dock"]').click();
  assert.match(await page.locator('#fd-zone-title').innerText(),/DOCKING CORE/);
  assert.equal(errors.length,0,'Page exceptions: '+errors.join(' | '));
- console.log('PASS: authored GLBs loaded, 3 venues, movement, action/round controls, dynamic renderer');
+ console.log('PASS: GLB, three arenas, actual Rapier breakable cover, GPU shield effect and tactical actions');
  await ctx.close();
 } finally {await browser.close()}
