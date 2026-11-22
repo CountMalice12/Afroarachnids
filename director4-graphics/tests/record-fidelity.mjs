@@ -11,8 +11,8 @@ const browser=await chromium.launch({headless:true,args:[
 let video;
 try {
  const context=await browser.newContext({
-  viewport:{width:1200,height:680},deviceScaleFactor:1,
-  recordVideo:{dir:'test-artifacts/fidelity-video',size:{width:1200,height:680}}
+  viewport:{width:960,height:540},deviceScaleFactor:1,
+  recordVideo:{dir:'test-artifacts/fidelity-video',size:{width:960,height:540}}
  });
  const page=await context.newPage();
  page.on('pageerror',e=>console.error('PAGE EXCEPTION:',e.message));
@@ -22,26 +22,26 @@ try {
  console.log('GLBs loaded; recording live 3D materials and camera.');
  const stage=page.locator('#fd-viewport');const r=await stage.boundingBox();
  // Exterior: show deck, real bulkhead and ring, crew movement, scanning and attack.
- await page.waitForTimeout(2700);
+ await page.waitForTimeout(1200);
  await page.mouse.move(r.x+r.width*.58,r.y+r.height*.43);
  await page.mouse.down();await page.mouse.move(r.x+r.width*.68,r.y+r.height*.46,{steps:8});await page.mouse.up();
- await page.waitForTimeout(1500);
+ await page.waitForTimeout(800);
  await page.keyboard.press('w');await page.keyboard.press('d');
  await page.locator('#fd-scan').click();await page.waitForTimeout(800);
- await page.locator('#fd-shoot').click();await page.waitForTimeout(1050);
- await page.locator('#fd-alarm').click();await page.waitForTimeout(850);
- await page.locator('#fd-camera').click();await page.waitForTimeout(950);
+ await page.locator('#fd-shoot').click();await page.waitForTimeout(500);
+ await page.locator('#fd-alarm').click();await page.waitForTimeout(450);
+ await page.locator('#fd-camera').click();await page.waitForTimeout(500);
  // Casino: real reflective marble material, ring-balcony geometry and crystal feature.
  console.log('Switching scene: casino');
- await page.locator('[data-scene="casino"]').click();await page.waitForTimeout(2900);
- await page.locator('#fd-camera').click();await page.waitForTimeout(1100);
+ await page.locator('[data-scene="casino"]').click();await page.waitForTimeout(500);
+ await page.locator('#fd-camera').click();await page.waitForTimeout(600);
  await page.locator('#fd-scan').click();await page.waitForTimeout(950);
  await page.locator('#fd-shoot').click();await page.waitForTimeout(1000);
  // Dock: actual ships, engineered dock assets and material reflections.
  console.log('Switching scene: docking');
- await page.locator('[data-scene="dock"]').click();await page.waitForTimeout(2750);
+ await page.locator('[data-scene="dock"]').click();await page.waitForTimeout(1200);
  await page.keyboard.press('a');await page.keyboard.press('w');await page.waitForTimeout(700);
- await page.locator('#fd-scan').click();await page.waitForTimeout(1300);
+ await page.locator('#fd-scan').click();await page.waitForTimeout(600);
  video=await page.video().path();
  await context.close();
 }finally{await browser.close()}
