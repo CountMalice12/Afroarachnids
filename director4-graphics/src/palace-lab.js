@@ -4,6 +4,7 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {buildPalaceSector,PALACE_SECTORS} from './palace-world.js';
 import {makeEarth,makePalace,makeStars} from './orbital-assets.js';
 
+const CAPTURE_MODE=new URLSearchParams(location.search).get('capture')==='1';
 const root=document.querySelector('#palace-app');
 root.innerHTML=`<style>
 *{box-sizing:border-box}
@@ -87,9 +88,9 @@ function setup(){
  camera.position.set(18,18,29);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.38;
- renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.shadowMap.enabled=!CAPTURE_MODE;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
- try{const p=new THREE.PMREMGenerator(renderer);reflections=p.fromScene(new RoomEnvironment(),.04);scene.environment=reflections.texture;p.dispose()}catch(e){writeLog('Reflection probe unavailable')}
+ if(!CAPTURE_MODE){try{const p=new THREE.PMREMGenerator(renderer);reflections=p.fromScene(new RoomEnvironment(),.04);scene.environment=reflections.texture;p.dispose()}catch(e){writeLog('Reflection probe unavailable')}}
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=9;controls.maxDistance=100;
  controls.minPolarAngle=.13;controls.maxPolarAngle=Math.PI*.475;controls.target.set(0,0,0);
  scene.add(new THREE.HemisphereLight(0xaad5ff,0x171e30,2.0));
@@ -255,9 +256,9 @@ function resize(){
  if(!renderer)return;
  const rect=stage.getBoundingClientRect(),w=Math.max(1,Math.round(rect.width)),h=Math.max(1,Math.round(rect.height));
  let density=quality==='high'?2:quality==='mobile'?1:1.45;
- const dpr=Math.min(window.devicePixelRatio||1,density);
+ const dpr=CAPTURE_MODE?.72:Math.min(window.devicePixelRatio||1,density);
  renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);
- renderer.shadowMap.enabled=quality!=='mobile';
+ renderer.shadowMap.enabled=!CAPTURE_MODE&&quality!=='mobile';
  camera.aspect=w/h;camera.updateProjectionMatrix();
  $('resolution').textContent=Math.round(w*dpr)+' × '+Math.round(h*dpr)+' • DPR '+dpr.toFixed(1)
 }
