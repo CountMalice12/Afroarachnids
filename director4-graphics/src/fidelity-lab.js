@@ -74,7 +74,19 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume;
+let sampleVolume,earthTexture=null;
+function makeEarthPhoto(){
+ if(!earthTexture)return makeEarth(THREE);
+ const g=new THREE.Group();
+ const m=new THREE.Mesh(new THREE.SphereGeometry(152,96,64),
+   new THREE.MeshStandardMaterial({map:earthTexture,roughness:1,metalness:0,emissive:0x102d4d,emissiveIntensity:.16}));
+ m.rotation.z=.21;g.add(m);
+ const glow=new THREE.Mesh(new THREE.SphereGeometry(155.5,80,56),new THREE.ShaderMaterial({
+  side:THREE.BackSide,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  vertexShader:'varying vec3 vNormal;varying vec3 vView;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vNormal=normalize(normalMatrix*normal);vView=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}',
+  fragmentShader:'varying vec3 vNormal;varying vec3 vView;void main(){float a=pow(1.0-abs(dot(normalize(vNormal),normalize(vView))),3.0);gl_FragColor=vec4(.15,.42,.9,a*.30);}'
+ }));g.add(glow);return g
+}
 const keys=new Set(),rays=new THREE.Raycaster();
 const M={};
 const mkMat=(col,met=.8,rough=.34,extras={})=>new THREE.MeshPhysicalMaterial({color:col,metalness:met,roughness:rough,clearcoat:.35,clearcoatRoughness:.18,...extras});
@@ -141,7 +153,7 @@ function decorativeBolts(x,z){
 }
 function buildSky(){
  scene.add(makeStars(THREE));
- const earth=makeEarth(THREE);earth.position.set(145,-214,-350);roomGroup.add(earth);
+ const earth=makeEarthPhoto();earth.position.set(145,-214,-350);roomGroup.add(earth);
  const ships=[];
  for(let j=0;j<3;j++){const s=makeShip(THREE,j===2?'heavy':'crew');s.scale.setScalar(j===2?.3:.14);
    s.position.set(35+j*20,17-j*6,-80-j*36);s.rotation.y=.55;roomGroup.add(s);ships.push(s);animated.push({o:s,speed:.035+j*.01})}
@@ -220,13 +232,15 @@ function buildCasino(){
   const balcony=new THREE.Mesh(geometry,M.gold);balcony.rotation.x=-Math.PI/2;balcony.position.set(dir*13,3.7,-.5);roomGroup.add(balcony);
   for(let j=0;j<11;j++){box(dir*16+(j-5)*.1,.25+j*.23,10-j*.56,4,.25,.6,j%2?M.dark:M.gold)}
  }
+ for(let x of [-19,-10,10,19]){cyl([x,0,-7],[x,7,-7],.31,M.gold);box(x,6.25,-7,1.9,.2,1.9,M.violet,false)}
+ const overhead=[];for(let x of [-18,-6,6,18])overhead.push(matrix(x,6.7,-12));batch('gantry_truss_6m',overhead,roomGroup,false);
  const consoles=[];for(const [x,z] of [[-15,-9],[15,-9],[-15,8],[15,8],[-5,11],[5,11]])consoles.push(matrix(x,0,z));
  batch('gantry_service_console',consoles);
  for(const [x,z] of [[-15,-9],[15,-9],[-15,8],[15,8],[-5,11],[5,11]])
   collider(x,z,2,1.3,'CASINO CONSOLE',12);
  for(let x=-18;x<=18;x+=6)box(x,5.6,-9,4.3,.1,.5,M.violet,false);
  // Sky through full glass wall: actual 3D earth.
- const earth=makeEarth(THREE);earth.position.set(80,-205,-380);roomGroup.add(earth);
+ const earth=makeEarthPhoto();earth.position.set(80,-205,-380);roomGroup.add(earth);
 }
 function buildDock(){
  lighting('gantry');buildSky();const tiles=[];
@@ -251,7 +265,7 @@ async function start(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.46;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
- camera=new THREE.PerspectiveCamera(51,1,.15,1600);camera.position.set(40,23,39);
+ camera=new THREE.PerspectiveCamera(45,1,.15,1600);camera.position.set(28,18,29);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,2.3));
@@ -261,6 +275,7 @@ async function start(){
  if(!cap){try{const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromScene(new RoomEnvironment(),.05).texture;p.dispose()}catch(e){addLog('IBL probe unavailable')}}
  if(!cap){composer=new EffectComposer(renderer,{frameBufferType:THREE.HalfFloatType});composer.addPass(new RenderPass(scene,camera));
   composer.addPass(new EffectPass(camera,new BloomEffect({intensity:.73,luminanceThreshold:.8,luminanceSmoothing:.25,mipmapBlur:true})));}
+ try{earthTexture=await new THREE.TextureLoader().loadAsync('./textures/earth_atmos_2048.jpg');earthTexture.colorSpace=THREE.SRGBColorSpace;earthTexture.anisotropy=8;addLog('Loaded photographic-style Earth texture.')}catch(e){addLog('Earth image unavailable; retaining generated sphere.')} 
  const loaded=await Promise.all(names.map(async n=>{const result=await loader.loadAsync('./models/'+n+'.glb');glb.set(n,result.scene);return n}));
  addLog('Loaded '+loaded.length+' original GLBs with physically based material channels');
  document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>loadScene(b.dataset.scene));
@@ -275,7 +290,7 @@ async function start(){
  requestAnimationFrame(render);
 }
 function applyCamera(){
- if(cinematic){controls.target.set(0,1,0);camGoal=current==='gantry'?new THREE.Vector3(42,22,43):current==='casino'?new THREE.Vector3(28,23,32):new THREE.Vector3(37,23,38)}
+ if(cinematic){controls.target.set(0,1,0);camGoal=current==='gantry'?new THREE.Vector3(28,18,29):current==='casino'?new THREE.Vector3(24,19,29):new THREE.Vector3(29,19,30)}
  else{controls.target.set(0,0,0);camGoal=new THREE.Vector3(1,49,42)}
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
