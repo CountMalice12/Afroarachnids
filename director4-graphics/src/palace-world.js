@@ -23,7 +23,7 @@ const THEMES={
 };
 export const PALACE_SECTORS=THEMES;
 const rgba=(T,color)=>new T.Color(color);
-export function buildPalaceSector(T,id){
+export function buildPalaceSector(T,id,art={}){
  const def=THEMES[id];if(!def)throw Error('Unknown Palace sector '+id);
  const group=new T.Group();group.name=id+' '+def.name;
  const solids=[],doors=[],interactables=[],lights=[];
@@ -31,8 +31,8 @@ export function buildPalaceSector(T,id){
  const glow=(c,intensity=3)=>new T.MeshStandardMaterial({color:0x243040,emissive:c,emissiveIntensity:intensity,roughness:.4,metalness:.34,toneMapped:false});
  const authored=generatePalaceMaterials(T);
  const mats={
-  floor:id==='CP-03'||id==='CP-04'?authored.marble:metallic(id==='CP-05'?0x405759:0x344758,.22,.62),
-  dark:metallic(0x111e29,.63,.7),steel:metallic(0x82949f,.3,.85),white:metallic(0xc3d6d9,.32,.32),
+  floor:id==='CP-03'||id==='CP-04'?(art.marble||authored.marble):(art.metal||metallic(id==='CP-05'?0x405759:0x344758,.22,.62)),
+  dark:metallic(0x111e29,.63,.7),steel:art.metal||metallic(0x82949f,.3,.85),white:metallic(0xc3d6d9,.32,.32),
   gold:metallic(0xd2ad64,.24,.87),glass:new T.MeshPhysicalMaterial({color:0x67b9ce,metalness:.12,roughness:.11,transparent:true,opacity:.48,depthWrite:false,clearcoat:.9,side:T.DoubleSide}),
   accent:glow(def.tint,2.7),amber:glow(0xfca961,2.7),danger:glow(0xf45878,2.8),
   foliage:new T.MeshStandardMaterial({color:0x348263,roughness:.82,side:T.DoubleSide}),
