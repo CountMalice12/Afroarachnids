@@ -23,8 +23,15 @@ try {
   assert.equal(await page.locator('#d4-sector').innerText(),'EARTH-LIMB PURSUIT');
   const initial=await page.locator('#d4-shipstats').innerText();
   // Avoid expensive full-frame readback under software WebGL CI.
-  await page.keyboard.down('w'); await page.waitForTimeout(450); await page.keyboard.up('w');
-  await page.waitForTimeout(200);
+  await page.keyboard.down('w');
+  // Software WebGL may not complete a frame for several seconds.
+  // Keep the key physically held until the game simulation advances,
+  // rather than mistaking the renderer's long frame for a dead input.
+  await page.waitForFunction(initialStats=>{
+    const current=document.querySelector('#d4-shipstats')?.innerText;
+    return Boolean(current && current!==initialStats)
+  },initial,{timeout:35000,polling:500});
+  await page.keyboard.up('w');
   const moved=await page.locator('#d4-shipstats').innerText();
   assert.notEqual(initial,moved,'Flight telemetry did not respond to thrust input');
   for(const [id,name] of [['debris','DEBRIS FIELD AMBUSH'],['cordon','CRYSTAL PALACE CORDON']]){
