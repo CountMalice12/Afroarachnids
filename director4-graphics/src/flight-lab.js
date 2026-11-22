@@ -78,6 +78,7 @@ root.innerHTML=`<style>
 <p id="d4-description"></p>
 </aside></div></div>`;
 const stage=$('d4-stage'), buttons=$('d4-mapbuttons');
+const CAPTURE_MODE=new URLSearchParams(location.search).get('capture')==='1';
 const shipInfo=$('d4-shipstats'),targetInfo=$('d4-targetbox');
 const keys=new Set(),clock=new THREE.Clock(),v0=new THREE.Vector3();
 const forwardAxis=new THREE.Vector3(0,0,-1),upAxis=new THREE.Vector3(0,1,0),rightAxis=new THREE.Vector3(1,0,0);
@@ -103,11 +104,11 @@ function setup(){
  camera=new THREE.PerspectiveCamera(58,1,.15,2200);camera.position.set(0,8,35);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.65;
- renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.shadowMap.enabled=!CAPTURE_MODE;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.className='webgl';stage.insertBefore(renderer.domElement,stage.firstChild);
- try{const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;pmrem.dispose()}catch(e){log('Reflection probe unavailable; using analytic lighting')}
- composer=new EffectComposer(renderer,{frameBufferType:THREE.HalfFloatType});composer.addPass(new RenderPass(scene,camera));
- composer.addPass(new EffectPass(camera,new BloomEffect({intensity:.65,luminanceThreshold:.72,luminanceSmoothing:.22,mipmapBlur:true})));
+ if(!CAPTURE_MODE){try{const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;pmrem.dispose()}catch(e){log('Reflection probe unavailable; using analytic lighting')}}
+ if(!CAPTURE_MODE){composer=new EffectComposer(renderer,{frameBufferType:THREE.HalfFloatType});composer.addPass(new RenderPass(scene,camera));
+ composer.addPass(new EffectPass(camera,new BloomEffect({intensity:.65,luminanceThreshold:.72,luminanceSmoothing:.22,mipmapBlur:true})));}
  const ambient=new THREE.HemisphereLight(0x91b6f4,0x101c2a,2);scene.add(ambient);
  sun=new THREE.DirectionalLight(0xffe1c6,3.4);sun.position.set(-100,150,-90);sun.castShadow=true;
  sun.shadow.camera.left=-115;sun.shadow.camera.right=115;sun.shadow.camera.top=115;sun.shadow.camera.bottom=-115;sun.shadow.camera.near=1;sun.shadow.camera.far=550;
@@ -183,13 +184,13 @@ function loadMap(id){
 }
 function setQuality(q){
  quality=q;const caps={low:1,balanced:1.5,ultra:2};
- const cap=caps[q]||1.5;dpr=Math.min(devicePixelRatio||1,cap);
- if(renderer){renderer.shadowMap.enabled=q!=='low';sun.shadow.mapSize.set(q==='ultra'?2048:1024,q==='ultra'?2048:1024);resize()}
+ const cap=caps[q]||1.5;dpr=CAPTURE_MODE?0.75:Math.min(devicePixelRatio||1,cap);
+ if(renderer){renderer.shadowMap.enabled=!CAPTURE_MODE&&q!=='low';sun.shadow.mapSize.set(q==='ultra'?2048:1024,q==='ultra'?2048:1024);resize()}
 }
 function resize(){
  if(!renderer)return;const r=stage.getBoundingClientRect(),w=Math.max(1,Math.round(r.width)),h=Math.max(1,Math.round(r.height));
  renderer.setPixelRatio(dpr);renderer.setSize(w,h,false);
- camera.aspect=w/h;camera.updateProjectionMatrix();composer.setSize(w,h);
+ camera.aspect=w/h;camera.updateProjectionMatrix();if(composer)composer.setSize(w,h);
  $('d4-res').textContent=Math.round(w*dpr)+' × '+Math.round(h*dpr)+' px • DPR '+dpr.toFixed(2);
 }
 function switchCamera(){
@@ -374,7 +375,7 @@ function animate(){
  requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta());
  state.time+=dt;
  if(player.hull>0){const steps=Math.max(1,Math.ceil(dt/(1/90))),sub=dt/steps;for(let k=0;k<steps;k++)fixedPhysics(sub)}
- cameraTick(dt);composer.render();
+ cameraTick(dt);if(CAPTURE_MODE)renderer.render(scene,camera);else composer.render();
  mapFrames++;if(state.time-lastHud>.25){hud(mapFrames/(state.time-lastHud));mapFrames=0;lastHud=state.time}
  if(state.time-lastRadar>.1){radar();lastRadar=state.time}
 }
