@@ -28,6 +28,11 @@ const leafDark=new THREE.MeshStandardMaterial({color:0x194638,side:THREE.DoubleS
 const leafGreen=new THREE.MeshStandardMaterial({color:0x276545,side:THREE.DoubleSide,roughness:.82});
 const pinkBlossom=new THREE.MeshStandardMaterial({color:0xc8689e,side:THREE.DoubleSide,roughness:.85});
 const lilacBlossom=new THREE.MeshStandardMaterial({color:0xe6a2d8,side:THREE.DoubleSide,roughness:.91});
+const contactMat=new THREE.MeshBasicMaterial({color:0x0c0918,transparent:true,opacity:.19,depthWrite:false});
+function contactShadow(x,z,width=1.2,depth=1.2){
+ const d=obj(new THREE.CircleGeometry(1,44),contactMat,x,.094,z);
+ d.rotation.x=-Math.PI/2;d.scale.set(width,depth,1);d.renderOrder=1;return d
+}
 let perf='high',root;
 const rand=()=>{rand.seed=(Math.imul(1664525,rand.seed)+1013904223)>>>0;return rand.seed/4294967296};
 rand.seed=20261122;
@@ -95,6 +100,7 @@ function stairRibbon(xStart,zStart,upZ,steps,width=4.7,height=4.6){
  }
 }
 function sofa(cx,cz,rot=0,scale=1,y=0){
+ if(y===0)contactShadow(cx,cz,1.65*scale,.6*scale);
  const g=new THREE.Group();g.position.set(cx,y,cz);g.rotation.y=rot;g.scale.setScalar(scale);root.add(g);
  rect(0,.61,0,2.55,.54,.88,velvet,.17,g);
  rect(0,1.16,.36,2.6,.77,.24,burgundy,.11,g);
@@ -128,6 +134,7 @@ function gamingTable(cx,cz,rot=0,r=2.2){
   disc(x,1.165,z,.072,.018,i%3===0?roseGold:i%3===1?violet:blue,10,g);
  }
  inlayCircle(cx,cz,r+1.5,goldDark);
+ contactShadow(cx,cz,r*.87,r*.67);
  return g;
 }
 function barCounter(){
@@ -344,7 +351,7 @@ function structuralDetails(){
   rect(-22.15,10.8,z,.25,1.1,.5,gold)
  }
 }
-export function buildCasinoHero({group,marble,addLight,addCollision,earth,high=true}){
+export function buildCasinoHero({group,marble,addLight,addCollision,earth,high=true,useScannedPlants=false}){
  root=group;perf=high?'high':'capture';rand.seed=20261122;
  deckFloor(marble);
  structuralDetails();
@@ -364,7 +371,7 @@ export function buildCasinoHero({group,marble,addLight,addCollision,earth,high=t
   [-18,12,true,5.3],[-11,-12,true,5.0],[-3,11,false,5.4],
   [5,-11,false,6.3],[17,-10,false,5.8],[20,14,false,5.2],
   [-21,-4,true,4.4],[0,-13,true,4.8]
- ]) tree(x,z,{pink,height,scale:1});
+ ]) {if(!pink&&useScannedPlants)continue;tree(x,z,{pink,height,scale:1});}
  const planters=[[-6,-13],[12,-12],[-18,14],[18,14]];
  for(const [x,z] of planters){
   rect(x,.36,z,2.8,.63,1.1,black,.11);rect(x,.69,z,2.93,.07,1.23,gold,.025);
