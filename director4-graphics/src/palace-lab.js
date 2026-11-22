@@ -6,6 +6,8 @@ import {makeEarth,makePalace,makeStars} from './orbital-assets.js';
 import {createTacticalCharacter} from './character-art.js';
 import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
 import {createCombatVFX} from './combat-vfx.js';
+import {loadScannedMaterials} from './scanned-materials.js';
+import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 
 const CAPTURE_MODE=new URLSearchParams(location.search).get('capture')==='1';
 const root=document.querySelector('#palace-app');
@@ -72,7 +74,7 @@ reflections,stars,earth,remotePalace,quality='balanced',alertOn=false,followCame
 const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2();
 const state={floor:'CP-01',round:1,action:1,move:8,hp:55,max:55,security:0,shooting:0,enemyHP:42};
 const lTmp=new THREE.Vector3(), targetPos=new THREE.Vector3();
-let savedProgress=new Map(),movementGoal=null,lastMoveAt=0,lastFrame=0,frames=0,lastFPSAt=0,trackObjects=[],destruction=null,vfx=null,shields=[],scorches=[],movementPulse=0;
+let savedProgress=new Map(),movementGoal=null,lastMoveAt=0,lastFrame=0,frames=0,lastFPSAt=0,trackObjects=[],destruction=null,vfx=null,shields=[],scorches=[],movementPulse=0,scannedBank=null,environmentBank={};
 function writeLog(t,level=''){const n=document.createElement('div');n.textContent='› '+t;n.style.color=level==='bad'?'#fa8594':level==='good'?'#8bf1b9':'#aacbd5';$('log').prepend(n)}
 function toast(msg,bad=false){$('toast').textContent=msg;$('toast').style.color=bad?'#ff93a5':'#9eeeff';$('toast').style.opacity='1';clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').style.opacity='0',1400)}
 function body(x,z,mat){
@@ -96,6 +98,17 @@ async function setup(){
  sun.shadow.mapSize.set(1536,1536);sun.shadow.bias=-.00018;scene.add(sun);
  stars=makeStars(THREE);scene.add(stars);
  await prepareDestructionPhysics();
+ try{scannedBank=await loadScannedMaterials(msg=>writeLog(msg,'good'));}catch(e){writeLog('Photo-scanned PBR material bank unavailable: '+e.message)}
+ if(!CAPTURE_MODE){
+  try{
+   const hdr=new RGBELoader(),pmrem=new THREE.PMREMGenerator(renderer);
+   for(const type of ['gantry','casino']){
+    const tex=await hdr.loadAsync('./hdri/'+type+'.hdr');
+    environmentBank[type]=pmrem.fromEquirectangular(tex).texture;tex.dispose()
+   }
+   pmrem.dispose();writeLog('Real HDR light probes applied to Palace materials','good')
+  }catch(e){writeLog('HDR probe failed, using studio light environment')}
+ }
  vfx=createCombatVFX(scene,{quality:CAPTURE_MODE?'mobile':'balanced'});
  destruction=createDestructionPhysics({scene,
    onDestroyed:(r,{position,stain})=>{scorches.push(stain);vfx.explosion(position,{radius:2.8,space:state.floor==='CP-10'});writeLog('PHYSICS: '+r.name+' shattered, LOS and collision released','good');},
@@ -147,7 +160,8 @@ function loadFloor(id){
  if(destruction)destruction.registerScene([]);if(vfx)vfx.reset();for(const a of scorches)scene.remove(a);scorches.length=0;
  disposeWorld();
  state.floor=id;state.action=1;state.move=8;state.enemyHP=42;window.d4Cover=null;
- world=buildPalaceSector(THREE,id);scene.add(world.group);
+ world=buildPalaceSector(THREE,id,{marble:scannedBank?.casino_marble,metal:scannedBank?.gantry_metal});scene.add(world.group);
+ if(!CAPTURE_MODE&&Object.keys(environmentBank).length)scene.environment=environmentBank[id==='CP-03'||id==='CP-04'?'casino':'gantry']||scene.environment;
  destruction.setGravity(id==='CP-09'||id==='CP-10'?0:-8.5);destruction.registerScene(world.solids);
  shields.length=0;
  scene.background=new THREE.Color(world.background);
