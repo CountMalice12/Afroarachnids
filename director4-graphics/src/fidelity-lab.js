@@ -9,6 +9,9 @@ import {makeEarth,makeStars,makeShip} from './orbital-assets.js';
 import {generatePalaceMaterials} from './palace-textures.js';
 import {loadScannedMaterials,remapAuthoredHullMaterials} from './scanned-materials.js';
 import {dressExteriorGantry,dressLuxuryCasino,dressDockingCore} from './cinematic-dressing.js';
+import {createTacticalCharacter} from './character-art.js';
+import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
+import {createCombatVFX} from './combat-vfx.js';
 
 // All modular assets are exported real GLB mesh geometry with PBR channels.
 // The background artwork is an art-direction reference, not a background image.
@@ -67,7 +70,7 @@ body.fd-film #fd-crosshair{opacity:.27}
 <h3>TACTICAL CONTROLS</h3><div id="fd-actionbuttons">
 <button id="fd-scan">Scan 3D space</button><button id="fd-shoot">Fire / cover</button>
 <button id="fd-open">Open airlock</button><button id="fd-alarm">Security alarm</button>
-<button id="fd-end">End round</button><button id="fd-camera">Change camera</button>
+<button id="fd-end">End round</button><button id="fd-camera">Change camera</button><button id="fd-grenade">G • Explosive Breach</button><button id="fd-shield">V • Shield Shader</button>
 </div>
 <div id="fd-controls"><span></span><button data-move="0,-1">↑</button><span></span><button data-move="-1,0">←</button><button data-move="0,1">↓</button><button data-move="1,0">→</button></div>
 <p>WASD moves the crew; drag to orbit the camera and pinch to zoom. F shoots and E opens an adjacent airlock. A destroyed cargo case no longer blocks movement or fire.</p>
@@ -85,7 +88,7 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={};
+let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0;
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
  const g=new THREE.Group();
@@ -137,15 +140,13 @@ function collider(x,z,w,d,name,hp=0,obj=null,door=false){
  const rec={x,z,w,d,name,hp,maxHP:hp,obj,active:true,door};
  volume.push(rec);return rec;
 }
-function addCrew(x,z){
- const token=new THREE.Group(),mat=mkMat(0x167a9a,.5,.28,{emissive:0x053e55,emissiveIntensity:.9});
- const body=new THREE.Mesh(new THREE.CapsuleGeometry(.36,.9,6,16),mat);
- body.position.y=1.0;body.castShadow=true;token.add(body);
- const face=new THREE.Mesh(new THREE.BoxGeometry(.45,.17,.12),M.holo);face.position.set(0,1.58,-.32);token.add(face);
- const h=new THREE.Mesh(new THREE.TorusGeometry(.56,.045,8,40),M.holo);h.rotation.x=Math.PI/2;h.position.y=.07;token.add(h);
- const beam=new THREE.PointLight(0x11bafa,7,3,2);beam.position.y=.9;token.add(beam);
- token.position.set(x,0,z);roomGroup.add(token);crew.push(token);return token;
+function addCrew(x,z,role='media'){
+ const actor=createTacticalCharacter(role,[x,0,z]);
+ roomGroup.add(actor);crew.push(actor);
+ if(vfx&&role!=='security')shields.push(vfx.addShield(actor,role==='solo'?0xff7ba3:0x65c9ef,1.25));
+ return actor;
 }
+
 function solidHit(x,z,pad=.42){
  return volume.find(v=>v.active&&Math.abs(x-v.x)<v.w/2+pad&&Math.abs(z-v.z)<v.d/2+pad);
 }
@@ -314,15 +315,22 @@ async function start(){
    cinematic=true;applyCamera();
    requestAnimationFrame(resize);
  });
+ await prepareDestructionPhysics();
+ vfx=createCombatVFX(scene,{quality:cap?'mobile':quality});
+ destruction=createDestructionPhysics({scene,gravity:-8,
+   onDestroyed:(record,{position,stain})=>{scorches.push(stain);vfx.explosion(position,{radius:2.7,space:current==='gantry'});cameraKick=.35;addLog('PHYSICS: '+record.name+' shattered; collision + LOS cleared');},
+   onImpact:(p)=>vfx.impact(p),
+   onExplosion:(p,e)=>{vfx.explosion(p,{radius:e.radius,space:current==='gantry'});cameraKick=.6;addLog('BLAST: '+e.hit+' cover objects hit, '+e.destroyed+' destroyed');}
+ });
  const loaded=await Promise.all(names.map(async n=>{const result=await loader.loadAsync('./models/'+n+'.glb');glb.set(n,result.scene);return n}));
  if(scannedBank)remapAuthoredHullMaterials(glb,scannedBank,addLog);
  addLog('Loaded '+loaded.length+' original GLBs with physically based material channels');
  document.querySelectorAll('[data-scene]').forEach(b=>b.onclick=()=>loadScene(b.dataset.scene));
- for(const [id,handler] of [['shoot',shoot],['scan',scan],['open',openAirlock],['end',endRound],['alarm',()=>{alarm=!alarm;el('alert').style.display=alarm?'block':'none';toast(alarm?'LOCKDOWN / LEVEL 03':'ALARM CLEARED');}],['camera',()=>{cinematic=!cinematic;applyCamera();}]])el(id).onclick=handler;
+ for(const [id,handler] of [['shoot',shoot],['scan',scan],['open',openAirlock],['end',endRound],['alarm',()=>{alarm=!alarm;el('alert').style.display=alarm?'block':'none';toast(alarm?'LOCKDOWN / LEVEL 03':'ALARM CLEARED');}],['camera',()=>{cinematic=!cinematic;applyCamera();}],['grenade',blastCover],['shield',toggleShield]])el(id).onclick=handler;
  document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{const [dx,dz]=b.dataset.move.split(',').map(Number);move(dx,dz)});
  document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea'))return;
   const k=e.key.toLowerCase();if('wasd'.includes(k)&&k.length===1){e.preventDefault();move(k==='a'?-1:k==='d'?1:0,k==='w'?-1:k==='s'?1:0)}
-  if(k==='f')shoot();if(k==='e')openAirlock();});
+  if(k==='f')shoot();if(k==='e')openAirlock();if(k==='g')blastCover();if(k==='v')toggleShield();});
  el('quality').onchange=e=>{quality=e.target.value;resize()};
  new ResizeObserver(resize).observe(stage);
  await loadScene('gantry');resize();el('loading').remove();
@@ -334,12 +342,14 @@ function applyCamera(){
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
 async function loadScene(mode){
- current=mode;volume.length=0;lights.length=0;animated.length=0;crew.length=0;fx.length=0;
+ current=mode;if(destruction)destruction.registerScene([]);if(vfx)vfx.reset();for(const s of scorches)scene.remove(s);scorches.length=0;
+ volume.length=0;lights.length=0;animated.length=0;crew.length=0;shields.length=0;fx.length=0;
  if(roomGroup)scene.remove(roomGroup);
  roomGroup=new THREE.Group();scene.add(roomGroup);
  if(mode==='gantry')buildGantry();else if(mode==='casino')buildCasino();else buildDock();
- addCrew(-15,8);addCrew(-16,5);addCrew(-18,7);
- enemy=addCrew(8,-4);enemy.children[0].material=mkMat(0xa33b50,.47,.4,{emissive:0x4e0a21,emissiveIntensity:.5});
+ addCrew(-15,8,'media');addCrew(-16,5,'medic');addCrew(-18,7,'solo');
+ enemy=addCrew(8,-4,'security');crew.pop();
+ if(destruction){destruction.setGravity(mode==='gantry'?0:-8.5);destruction.registerScene(volume)}
  // Four squad members share the same authored physical map, but this is a test encounter.
  moves=8;action=true;enemyHP=42;round=1;playerHP=55;
  const name=scenes[mode];el('zone-title').textContent=name.title;el('zone-sub').textContent=name.sub;
@@ -354,7 +364,7 @@ function move(dx,dz){
  for(let i=1;i<=12;i++){const x=from.x+(tx-from.x)*i/12,z=from.z+(tz-from.z)*i/12;
   const hit=solidHit(x,z);if(hit){toast('BLOCKED BY '+hit.name,true);return}}
  if(Math.abs(tx)>22||Math.abs(tz)>15){toast('EDGE OF BOARD',true);return}
- p.x=tx;p.z=tz;moves=Math.max(0,moves-2);refresh();addLog('Crew advanced 1.6 m')
+ p.x=tx;p.z=tz;moves=Math.max(0,moves-2);walkPulse=1;refresh();addLog('Crew advanced 1.6 m')
 }
 function fireLine(){
  const a=crew[0].position,b=enemy.position;
@@ -366,17 +376,31 @@ function fireLine(){
 function shoot(){
  if(!action){toast('ACTION SPENT',true);return}action=false;
  const hit=fireLine();
- if(hit){if(hit.hp>0){hit.hp=Math.max(0,hit.hp-12);toast('COVER HIT: -12',true);
-  if(hit.hp===0){hit.active=false;if(hit.obj)hit.obj.visible=false;addLog('Cover destroyed: LOS & movement updated')}}
-  else toast('BULKHEAD BLOCKS SHOT',true);
- }else{enemyHP=Math.max(0,enemyHP-15);toast('DIRECT HIT / 15');if(enemyHP===0)enemy.visible=false}
+ if(hit){if(hit.hp>0){const result=destruction.damage(hit,12,{point:new THREE.Vector3(hit.x,1.1,hit.z),impulse:36});
+  toast(result.destroyed?'COVER SHATTERED':'COVER HIT: -12',true)}
+  else{toast('BULKHEAD BLOCKS SHOT',true);vfx.impact(new THREE.Vector3(hit.x,1.3,hit.z));}}
+ }else{enemyHP=Math.max(0,enemyHP-15);toast('DIRECT HIT / 15');enemy.userData.hit?.();vfx.impact(enemy.position.clone().add(new THREE.Vector3(0,1.2,0)));if(enemyHP===0)enemy.visible=false}
  addLog(hit?'Ballistics collide with '+hit.name:'Enemy hit; native RED resolver would handle DV & armor');
  // Visible beam traced between player and obstruction or enemy.
- const from=crew[0].position.clone().add(new THREE.Vector3(0,1.4,0));
+ crew[0].userData.fire?.();const from=crew[0].position.clone().add(new THREE.Vector3(0,1.4,0));vfx.muzzle(from);
  const to=hit?new THREE.Vector3(hit.x,1.4,hit.z):enemy.position.clone().add(new THREE.Vector3(0,1.4,0));
  const d=to.clone().sub(from),beam=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,d.length(),10),M.holo);
  beam.position.copy(from).add(to).multiplyScalar(.5);beam.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
  roomGroup.add(beam);fx.push({o:beam,t:1.7});refresh();
+}
+function blastCover(){
+ if(!action){toast('ACTION SPENT',true);return}
+ action=false;
+ const candidate=volume.filter(o=>o.active&&o.maxHP>0).sort((a,b)=>Math.hypot(a.x,a.z)-Math.hypot(b.x,b.z))[0];
+ const point=candidate?new THREE.Vector3(candidate.x,1.2,candidate.z):new THREE.Vector3(0,1.2,0);
+ const result=destruction.explosion(point,5.1,68,92,volume);
+ toast('EXPLOSIVE BREACH: '+result.destroyed+' COVER DESTROYED');
+ if(enemy.position.distanceTo(point)<5.1&&enemyHP>0){enemyHP=Math.max(0,enemyHP-20);enemy.userData.hit?.();if(enemyHP===0)enemy.visible=false}
+ refresh()
+}
+function toggleShield(){
+ for(const s of shields){s.visible=!s.visible;if(s.visible)vfx.shieldHit(s)}
+ toast(shields[0]?.visible?'CYBER SHIELDS ACTIVE':'SHIELDS DISABLED');
 }
 function scan(){scanOff=performance.now()+3800;toast('TACTICAL SWEEP');addLog('Scan: physical cover and enemy contact mapped')}
 function openAirlock(){
@@ -389,7 +413,7 @@ function endRound(){round++;moves=8;action=true;if(enemyHP>0&&!fireLine())player
  refresh();addLog('Initiative advanced to round '+round)}
 function refresh(){
  el('hp').textContent='CREW HP '+playerHP+' / 55';el('move').textContent='MOVE '+moves+' / 8';
- el('enemy').textContent='HOSTILE '+enemyHP+' HP';el('dv').textContent='ROUND '+String(round).padStart(2,'0')+' • '+(action?'ACTION':'SPENT')
+ el('enemy').textContent='HOSTILE '+enemyHP+' HP';el('dv').textContent='ROUND '+String(round).padStart(2,'0')+' • '+(action?'ACTION':'SPENT')+' • '+(destruction?.metrics().debris||0)+' DEBRIS'
 }
 function resize(){
  if(!renderer)return;
@@ -407,6 +431,10 @@ function render(now){
  animated.forEach(({o,speed})=>o.position.x-=dt*speed*11);
  if(ring)ring.rotation.z+=dt*.0018;
  for(let i=fx.length-1;i>=0;i--){fx[i].t-=dt;if(fx[i].t<=0){roomGroup.remove(fx[i].o);fx.splice(i,1)}}
+ destruction?.tick(dt);vfx?.tick(dt);
+ walkPulse=Math.max(0,walkPulse-dt*1.9);
+ crew.forEach((c,i)=>c.userData.animate?.(dt,i===0?walkPulse:.08));enemy?.userData.animate?.(dt,.03);
+ if(cameraKick>.003){camera.position.add(new THREE.Vector3(Math.sin(now*.083)*cameraKick*.16,Math.cos(now*.071)*cameraKick*.12,0));cameraKick*=Math.exp(-dt*11)}
  controls.update();if(composer)composer.render();else renderer.render(scene,camera)
 }
 start().catch(e=>{el('loading').textContent='GRAPHICS LAB COULD NOT START: '+e.message;console.error(e)});
