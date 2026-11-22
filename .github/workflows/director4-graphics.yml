@@ -63,6 +63,7 @@ jobs:
           sleep 3
           npm run test:smoke
           node tests/palace.smoke.mjs
+          timeout 180s node tests/fidelity.smoke.mjs
       - name: Upload real browser captures
         if: always()
         uses: actions/upload-artifact@v4
