@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Download a few artist-authored CC0 Poly Haven 3D props as reusable GLBs."""
 from urllib.request import Request,urlopen
+from urllib.parse import urljoin
 from pathlib import Path
 import json,tempfile,zipfile,io,os
 import trimesh
@@ -45,6 +46,16 @@ for name,slug in ASSETS.items():
   if not candidates:print('No glTF asset found in zip:',slug);continue
   source=sorted(candidates,key=lambda x:len(x.parts))[0]
   print('Importing',source,flush=True)
+  if source.suffix.lower()=='.gltf':
+   # Poly Haven exposes glTF with separate .bin, image and material resources.
+   # Keep its relative asset hierarchy during conversion to a single GLB.
+   tree=json.loads(source.read_text())
+   for entry in tree.get('buffers',[])+tree.get('images',[]):
+    uri=entry.get('uri','')
+    if not uri or uri.startswith('data:') or '://' in uri:continue
+    dest=source.parent/uri;dest.parent.mkdir(parents=True,exist_ok=True)
+    dest.write_bytes(fetch(urljoin(url,uri)))
+    print('Fetched glTF dependency',dest.name,dest.stat().st_size,flush=True)
   scene=trimesh.load(source,force='scene')
   if len(scene.geometry)==0:raise RuntimeError('Empty geometry '+slug)
   out=BASE/(name+'.glb');out.write_bytes(scene.export(file_type='glb'))
