@@ -11,8 +11,8 @@ const browser=await chromium.launch({headless:true,args:[
 let video;
 try {
  const context=await browser.newContext({
-  viewport:{width:960,height:540},deviceScaleFactor:1,
-  recordVideo:{dir:'test-artifacts/fidelity-video',size:{width:960,height:540}}
+  viewport:{width:900,height:506},deviceScaleFactor:1,
+  recordVideo:{dir:'test-artifacts/fidelity-video',size:{width:900,height:506}}
  });
  const page=await context.newPage();
  page.on('pageerror',e=>console.error('PAGE EXCEPTION:',e.message));
@@ -21,7 +21,7 @@ try {
  await page.locator('#fd-loading').waitFor({state:'detached',timeout:130000});
  console.log('GLBs and Rapier initialized: recording actual 3D physics destruction, shader VFX and refined squad.');
  const stage=page.locator('#fd-viewport');
- await page.locator('#fd-film').click();
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");
  await page.waitForTimeout(850);
  const r=await stage.boundingBox();
  // Exterior: show deck, real bulkhead and ring, crew movement, scanning and attack.
@@ -30,32 +30,32 @@ try {
  await page.mouse.down();await page.mouse.move(r.x+r.width*.68,r.y+r.height*.46,{steps:8});await page.mouse.up();
  await page.waitForTimeout(800);
  await page.keyboard.press('w');await page.keyboard.press('d');
- await page.locator('#fd-film').click();
- await page.locator('#fd-scan').click();await page.waitForTimeout(800);
- await page.locator('#fd-shoot').click();await page.waitForTimeout(350);
- await page.locator('#fd-end').click();
- await page.locator('#fd-grenade').click();await page.waitForTimeout(1700);
- await page.locator('#fd-shield').click();await page.waitForTimeout(900);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-scan");await page.waitForTimeout(800);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-shoot");await page.waitForTimeout(350);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-end");
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-grenade");await page.waitForTimeout(1150);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-shield");await page.waitForTimeout(900);
  console.log('GANTRY DESTRUCTION:',await page.locator('#fd-dv').innerText());
- await page.locator('#fd-alarm').click();await page.waitForTimeout(450);
- await page.locator('#fd-camera').click();await page.waitForTimeout(500);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-alarm");await page.waitForTimeout(450);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-camera");await page.waitForTimeout(500);
  // Casino: real reflective marble material, ring-balcony geometry and crystal feature.
  console.log('Switching scene: casino');
- await page.locator('[data-scene="casino"]').click();await page.waitForTimeout(500);
- await page.locator('#fd-film').click();await page.waitForTimeout(1200);
- await page.locator('#fd-film').click();
- await page.locator('#fd-camera').click();await page.waitForTimeout(600);
- await page.locator('#fd-scan').click();await page.waitForTimeout(950);
- await page.locator('#fd-shield').click();
- await page.locator('#fd-grenade').click();await page.waitForTimeout(1250);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"[data-scene=\"casino\"]");await page.waitForTimeout(500);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");await page.waitForTimeout(1200);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-camera");await page.waitForTimeout(600);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-scan");await page.waitForTimeout(950);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-shield");
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-grenade");await page.waitForTimeout(1250);
  // Dock: actual ships, engineered dock assets and material reflections.
  console.log('Switching scene: docking');
- await page.locator('[data-scene="dock"]').click();await page.waitForTimeout(1200);
- await page.locator('#fd-film').click();await page.waitForTimeout(950);
- await page.locator('#fd-film').click();
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"[data-scene=\"dock\"]");await page.waitForTimeout(1200);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");await page.waitForTimeout(950);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-film");
  await page.keyboard.press('a');await page.keyboard.press('w');await page.waitForTimeout(700);
- await page.locator('#fd-grenade').click();await page.waitForTimeout(1450);
- await page.locator('#fd-scan').click();await page.waitForTimeout(600);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-grenade");await page.waitForTimeout(1450);
+ await page.evaluate(selector=>{const node=document.querySelector(selector);if(!node)throw Error('Missing button: '+selector);node.click()},"#fd-scan");await page.waitForTimeout(600);
  video=await page.video().path();
  await context.close();
 }finally{await browser.close()}
