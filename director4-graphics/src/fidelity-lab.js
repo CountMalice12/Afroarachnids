@@ -379,7 +379,7 @@ function shoot(){
  if(hit){if(hit.hp>0){const result=destruction.damage(hit,12,{point:new THREE.Vector3(hit.x,1.1,hit.z),impulse:36});
   toast(result.destroyed?'COVER SHATTERED':'COVER HIT: -12',true)}
   else{toast('BULKHEAD BLOCKS SHOT',true);vfx.impact(new THREE.Vector3(hit.x,1.3,hit.z));}}
- }else{enemyHP=Math.max(0,enemyHP-15);toast('DIRECT HIT / 15');enemy.userData.hit?.();vfx.impact(enemy.position.clone().add(new THREE.Vector3(0,1.2,0)));if(enemyHP===0)enemy.visible=false}
+ else{enemyHP=Math.max(0,enemyHP-15);toast('DIRECT HIT / 15');enemy.userData.hit?.();vfx.impact(enemy.position.clone().add(new THREE.Vector3(0,1.2,0)));if(enemyHP===0)enemy.visible=false}
  addLog(hit?'Ballistics collide with '+hit.name:'Enemy hit; native RED resolver would handle DV & armor');
  // Visible beam traced between player and obstruction or enemy.
  crew[0].userData.fire?.();const from=crew[0].position.clone().add(new THREE.Vector3(0,1.4,0));vfx.muzzle(from);
