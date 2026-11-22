@@ -28,7 +28,7 @@ export async function loadCasinoHeroProps(loader,log=()=>{}){
  return models;
 }
 function putAsset(group,model,x,z,{height=1.0,rotation=0,y=0,scaleMult=1}={}){
- const container=new THREE.Group();container.position.set(x,y,z);container.rotation.y=rotation;
+ const container=new THREE.Group();container.userData.preserveArtAsset=true;container.position.set(x,y,z);container.rotation.y=rotation;
  const mesh=model.clone(true);
  const size=model.userData.originalSize||new THREE.Vector3(1,1,1);
  const scale=height/Math.max(.001,size.y)*scaleMult;
