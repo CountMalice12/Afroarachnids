@@ -1,0 +1,54 @@
+name: Record Director 4 Orbital Gameplay Video
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/tests/record-orbital.mjs'
+      - '.github/workflows/director4-record-video.yml'
+permissions:
+  contents: write
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install graphics packages and GPU software browser
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+      - name: Start graphics lab and capture real 3D gameplay
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/director4-record-vite.log 2>&1 &
+          sleep 6
+          timeout 450s node tests/record-orbital.mjs
+      - name: Upload original screen captures and MP4
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director4-orbital-3d-gameplay-video
+          path: |
+            director4-graphics/test-artifacts/Director4_Orbital_Real3D_Gameplay.mp4
+            director4-graphics/test-artifacts/video/*.webm
+          if-no-files-found: warn
+      - name: Publish MP4 to feature branch for direct playback
+        if: success()
+        run: |
+          mkdir -p demo
+          cp test-artifacts/Director4_Orbital_Real3D_Gameplay.mp4 demo/Director4_Orbital_Real3D_Gameplay.mp4
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/demo/Director4_Orbital_Real3D_Gameplay.mp4
+          git commit -m 'Add actual browser-recorded 3D space gameplay video'
+          git push origin HEAD:feature/director4-graphics-toolkit

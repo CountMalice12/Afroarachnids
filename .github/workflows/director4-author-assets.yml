@@ -1,0 +1,47 @@
+name: Author Crystal Palace GLB Assets
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/scripts/author_palace_assets.py'
+      - '.github/workflows/director4-author-assets.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  author:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Blender-independent GLB authoring stack
+        run: pip install "trimesh>=4.4,<5" "numpy>=1.26,<3" "pillow>=10,<13" "scipy>=1.12,<2"
+      - name: Export authored 3D architectural models and PBR channels
+        run: |
+          python scripts/author_palace_assets.py
+          python - <<'PY'
+          from pathlib import Path
+          import trimesh
+          models=list(Path('public/models').glob('*.glb'))
+          assert len(models)==9, f"Expected 9 GLBs, got {len(models)}"
+          for p in models:
+              scene=trimesh.load(p,force='scene')
+              assert len(scene.geometry)>4,(p,len(scene.geometry))
+              print(p,p.stat().st_size,len(scene.geometry),"mesh parts")
+          PY
+      - name: Commit 3D assets on feature branch without overwriting other work
+        run: |
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/public
+          git commit -m 'Export nine original textured Crystal Palace GLB modules'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
+          git push origin HEAD:feature/director4-graphics-toolkit

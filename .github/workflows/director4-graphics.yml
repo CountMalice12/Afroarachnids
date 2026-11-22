@@ -1,0 +1,78 @@
+name: Director 4.0 Graphics Toolkit CI
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/**'
+      - '.github/workflows/director4-graphics.yml'
+  pull_request:
+    paths:
+      - 'director4-graphics/**'
+      - '.github/workflows/director4-graphics.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate JavaScript module syntax
+        run: |
+          node --check src/main.js
+          node --check src/director-bridge.js
+          node --check src/orbital-assets.js
+          node --check src/flight-lab.js
+          node --check src/palace-world.js
+          node --check src/palace-lab.js
+          node --check src/palace-textures.js
+          node --check src/fidelity-lab.js
+          node --check src/character-art.js
+          node --check src/combat-vfx.js
+          node --check src/destruction-physics.js
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bundle both tactical and orbital lab
+        run: |
+          node tests/destruction.unit.mjs
+          npm run build
+      - name: Check Vite output includes both entry points
+        run: |
+          test -f dist/index.html
+          test -f dist/flight.html
+          test -f dist/palace.html
+          test -f dist/fidelity.html
+  browser-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install packages and Playwright Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run orbital WebGL smoke test
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/director4-vite.log 2>&1 &
+          sleep 3
+          npm run test:smoke
+          node tests/palace.smoke.mjs
+          timeout 180s node tests/fidelity.smoke.mjs
+      - name: Upload real browser captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director4-3d-flight-screenshots
+          path: director4-graphics/test-artifacts/*.png
+          if-no-files-found: ignore

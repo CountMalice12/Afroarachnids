@@ -1,0 +1,51 @@
+{
+  "models": [
+    {
+      "name": "gantry_floor_panel",
+      "bytes": 1021772,
+      "meshes": 26
+    },
+    {
+      "name": "gantry_truss_6m",
+      "bytes": 1039940,
+      "meshes": 37
+    },
+    {
+      "name": "pressure_rail_4m",
+      "bytes": 8232,
+      "meshes": 10
+    },
+    {
+      "name": "pressure_bulkhead_5m",
+      "bytes": 1027396,
+      "meshes": 39
+    },
+    {
+      "name": "airlock_door_3m",
+      "bytes": 1014764,
+      "meshes": 13
+    },
+    {
+      "name": "cargo_crate_hardcase",
+      "bytes": 1017064,
+      "meshes": 20
+    },
+    {
+      "name": "gantry_service_console",
+      "bytes": 1026472,
+      "meshes": 34
+    },
+    {
+      "name": "observation_glazing_5m",
+      "bytes": 5476,
+      "meshes": 8
+    },
+    {
+      "name": "habitat_ring_arc",
+      "bytes": 1116556,
+      "meshes": 130
+    }
+  ],
+  "license": "Original authored project assets",
+  "author": "Director 4.0 graphics studio"
+}

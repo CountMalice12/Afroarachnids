@@ -1,0 +1,36 @@
+name: Acquire CC0 Artist-Made Palace Props
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/scripts/acquire_hero_props.py'
+      - '.github/workflows/director4-hero-models.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install glTF mesh loader and materials tools
+        run: pip install 'trimesh>=4.4,<5' 'numpy>=1.26,<3' 'pillow>=10,<13' 'scipy>=1.12,<2'
+      - name: Download CC0 authored props and export binary glTF
+        run: python scripts/acquire_hero_props.py
+      - name: Commit production prop meshes
+        run: |
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/public/hero-models
+          git commit -m 'Add licensed high-detail 3D industrial and cargo props'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
+          git push origin HEAD:feature/director4-graphics-toolkit

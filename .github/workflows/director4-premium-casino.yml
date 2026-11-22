@@ -1,0 +1,55 @@
+name: Record Premium Crystal Palace Casino
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - '.github/workflows/director4-premium-casino.yml'
+      - 'director4-graphics/tests/record-casino-premium.mjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install graphics and video capture tools
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Capture rebuilt Casino in interactive renderer
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort >/tmp/premium-casino-vite.log 2>&1 &
+          sleep 5
+          timeout 430s node tests/record-casino-premium.mjs
+      - name: Archive actual browser footage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director4-premium-crystal-palace-casino
+          path: |
+            director4-graphics/test-artifacts/Director4_CrystalPalace_PremiumCasino_3D.mp4
+            director4-graphics/test-artifacts/casino-premium/*.webm
+          if-no-files-found: ignore
+      - name: Add finished capture to feature branch
+        if: success()
+        run: |
+          mkdir -p demo
+          cp test-artifacts/Director4_CrystalPalace_PremiumCasino_3D.mp4 demo/Director4_CrystalPalace_PremiumCasino_3D.mp4
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/demo/Director4_CrystalPalace_PremiumCasino_3D.mp4
+          git commit -m 'Record premium Casino architectural art upgrade from live 3D engine'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
+          git push origin HEAD:feature/director4-graphics-toolkit

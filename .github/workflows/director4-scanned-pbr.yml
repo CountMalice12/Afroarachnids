@@ -1,0 +1,48 @@
+name: Acquire CC0 Scanned Palace PBR Materials
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/scripts/acquire_scanned_materials.py'
+      - '.github/workflows/director4-scanned-pbr.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  material-bank:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Acquire scanned material maps from Poly Haven Files API
+        run: python scripts/acquire_scanned_materials.py
+      - name: Validate material texture provenance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('public/materials/manifest.json').read_text())
+          for name,item in d.items():
+            assert item['license']=='CC0'
+            assert all(k in item['channels'] for k in ['albedo','normal','roughness'])
+            for fp in item['channels'].values():
+              f=Path('public')/fp
+              assert f.is_file() and f.stat().st_size>4096,fp
+            print(name,item['channels'])
+          PY
+      - name: Commit CC0 scanned PBR maps for offline game loading
+        run: |
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/public/materials
+          git commit -m 'Add three scanned photo-based PBR material sets for the Crystal Palace'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
+          git push origin HEAD:feature/director4-graphics-toolkit

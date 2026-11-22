@@ -1,0 +1,24 @@
+{
+  "name": "director4-graphics-toolkit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test:smoke": "node tests/flight.smoke.mjs"
+  },
+  "dependencies": {
+    "three": "latest",
+    "three-mesh-bvh": "latest",
+    "postprocessing": "latest",
+    "@dimforge/rapier3d-compat": "latest",
+    "recast-navigation": "latest"
+  },
+  "devDependencies": {
+    "vite": "latest",
+    "@gltf-transform/cli": "latest",
+    "playwright": "^1.56.0"
+  }
+}

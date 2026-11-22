@@ -1,0 +1,37 @@
+name: Acquire CC0 HDRI Lighting Probes
+on:
+  push:
+    branches: [feature/director4-graphics-toolkit]
+    paths:
+      - 'director4-graphics/scripts/acquire_hdri.py'
+      - '.github/workflows/director4-hdri.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download and validate real HDR studio/industrial probes
+        run: |
+          python scripts/acquire_hdri.py
+          test $(stat -c%s public/hdri/gantry.hdr) -gt 20000
+          test $(stat -c%s public/hdri/casino.hdr) -gt 20000
+      - name: Commit CC0 reflection probes
+        run: |
+          cd ..
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add director4-graphics/public/hdri
+          git commit -m 'Add CC0 HDRI probes for physically based architectural reflections'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
+          git push origin HEAD:feature/director4-graphics-toolkit
