@@ -50,4 +50,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add director4-graphics/demo/Director4_CrystalPalace_10Sector_Real3D.mp4
           git commit -m 'Add real-time modeled Crystal Palace floors gameplay recording'
+          git fetch origin feature/director4-graphics-toolkit
+          git rebase origin/feature/director4-graphics-toolkit
           git push origin HEAD:feature/director4-graphics-toolkit
