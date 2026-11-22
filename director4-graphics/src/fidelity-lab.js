@@ -235,7 +235,7 @@ function buildGantry(){
 function addCasinoPlanarReflections(){
  // Real-time reflected objects on the polished marble; disabled on low-power
  // devices to keep map navigation and destruction responsive.
- if(cap||quality==='mobile')return;
+ if(cap||quality==='mobile'||window.innerWidth<850)return;
  const px=Math.min(1024,quality==='ultra'?1024:512);
  floorReflector=new Reflector(new THREE.PlaneGeometry(45.2,31.1),{
   clipBias:.004,textureWidth:px,textureHeight:px,color:0x9b9d9e
@@ -258,11 +258,11 @@ function buildCasino(){
    addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
    addCollision:(x,z,w,d,name,hp=0,physicalMesh=null)=>collider(x,z,w,d,name,hp,physicalMesh),
    earth:makeEarthPhoto,
-   high:!cap&&quality!=='mobile'
+   high:!cap&&quality!=='mobile'&&window.innerWidth>=850
  });
  const shell=surroundCasino({group:roomGroup,addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
-   high:!cap&&quality!=='mobile'});
- const scans=dressCasinoWithScans(roomGroup,scanModels,{mobile:cap||quality==='mobile'});
+   high:!cap&&quality!=='mobile'&&window.innerWidth>=850});
+ const scans=dressCasinoWithScans(roomGroup,scanModels,{mobile:cap||quality==='mobile'||window.innerWidth<850});
  addCasinoPlanarReflections();
  addLog('Architectural envelope: '+shell.sealedSides+' enclosed hull sides, '+shell.windows+' observation bays, real upper soffit and ring supports.');
  addLog('CC0 scanned decor: '+scans.chairs+' chairs, '+scans.plants+' potted plants and '+scans.shrubs+' flowering bushes.');
