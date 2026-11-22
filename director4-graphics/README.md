@@ -40,3 +40,28 @@ WASD or onscreen buttons: move the blue token; click "Fire LOS test" to test a s
 6. Benchmark 30/60 FPS and memory at multiple device classes; adaptive resolution and LOD are mandatory.
 
 **Important:** The only GitHub repository currently connected is Afroarachnids, which does not contain the Director game. This is therefore a self-contained toolkit on a feature branch, **not** a live-site installation.
+
+## High-fidelity orbital combat lab
+
+**Open [flight.html](./flight.html)** after running `npm install && npm run dev`.
+This adds three REAL 3D environments and ships as a sibling game screen:
+Earth-Limb Pursuit, Debris Field Ambush, and Crystal Palace Cordon.
+
+Features: 80-segment curved spacecraft fuselages, beveled swept wings,
+cockpit glazing, PBR surface maps (basecolor, normal, roughness),
+layered nozzle geometry, greebles, detailed five-ring station,
+instance-lit windows, atmospheric Earth, modeled debris, GPU lighting,
+bloom, directional shadow support, Newtonian X/Y/Z flight, pitch/yaw/roll,
+enemy AI, targeting, railguns, homing missiles, shields, hull and obstacles,
+mission-specific collider groups, and mobile touch controls.
+
+**Graphics quality:** three profiles (Low/Mobile, Balanced, Ultra/Desktop)
+with responsive renderer and DPR caps, in both flight and tactical lab.
+No source assets from Cyberpunk 2077 have been used or redistributed.
+This is modeled **real-time 3D** with procedural PBR materials, but
+not yet cinematic photorealism. The exact visual fidelity, frame rate,
+postprocessing compatibility and mobile memory performance must be checked
+in a GPU-enabled browser. True production quality would require
+professionally authored high-resolution GLBs, baked AO and quality HDRIs.
+
+This GitHub branch is only a staging toolkit; not a live Director 4.0 deployment.
