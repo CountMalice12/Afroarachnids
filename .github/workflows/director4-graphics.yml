@@ -36,3 +36,30 @@ jobs:
         run: |
           test -f dist/index.html
           test -f dist/flight.html
+  browser-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: director4-graphics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install packages and Playwright Chromium
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Run orbital WebGL smoke test
+        run: |
+          npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/director4-vite.log 2>&1 &
+          sleep 3
+          npm run test:smoke
+      - name: Upload real browser captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director4-3d-flight-screenshots
+          path: director4-graphics/test-artifacts/*.png
+          if-no-files-found: ignore
