@@ -92,7 +92,7 @@ const stage=el('viewport'), scenes={
 const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure_bulkhead_5m','airlock_door_3m','cargo_crate_hardcase','gantry_service_console','observation_glazing_5m','habitat_ring_arc'];
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
-let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
+let renderer,scene,camera,controls,composer,lightSun,ambientKey,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
 let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0,scanModels=new Map(),floorReflector=null;
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
@@ -193,7 +193,9 @@ function buildRing(){
 function lighting(mode){
  const cold=mode==='gantry';
  if(hdriBank[cold?'gantry':'casino'])scene.environment=hdriBank[cold?'gantry':'casino'];
- lightSun.intensity=cold?3.7:2.7;
+ lightSun.intensity=cold?3.7:1.72;
+ ambientKey.intensity=cold?1.25:.70;
+ renderer.toneMappingExposure=cold?1.1:.93;
  lightSun.color.setHex(cold?0xd5eaff:0xffdbb6);
  scene.background=new THREE.Color(cold?0x010b18:0x0a1023);
  const main=light(-10,5,-6,cold?0xffbd73:0xffc797,cold?44:32,21);
@@ -259,7 +261,8 @@ function buildCasino(){
    addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
    addCollision:(x,z,w,d,name,hp=0,physicalMesh=null)=>collider(x,z,w,d,name,hp,physicalMesh),
    earth:makeEarthPhoto,
-   high:!cap&&quality!=='mobile'&&window.innerWidth>=850
+   high:!cap&&quality!=='mobile'&&window.innerWidth>=850,
+   useScannedPlants:scanModels.has('potted_plant')
  });
  const shell=surroundCasino({group:roomGroup,addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
    high:!cap&&quality!=='mobile'&&window.innerWidth>=850});
@@ -298,7 +301,7 @@ async function start(){
  camera=new THREE.PerspectiveCamera(47,1,.15,1600);camera.position.set(17.7,14.1,23.2);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
- scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,1.25));
+ ambientKey=new THREE.HemisphereLight(0xaacdf7,0x162031,1.25);scene.add(ambientKey);
  lightSun=new THREE.DirectionalLight(0xd8eaff,4.8);lightSun.position.set(-38,75,37);lightSun.castShadow=!cap;
  lightSun.shadow.mapSize.set(2048,2048);lightSun.shadow.camera.left=-95;lightSun.shadow.camera.right=95;
  lightSun.shadow.camera.top=95;lightSun.shadow.camera.bottom=-95;scene.add(lightSun);
@@ -319,6 +322,7 @@ async function start(){
  try{scannedBank=await loadScannedMaterials(addLog);
  M.plate=scannedBank.gantry_metal;
  M.marble=scannedBank.casino_marble;
+ M.marble.color.setHex(0x888b9a);M.marble.roughness=.19;M.marble.clearcoat=.92;M.marble.clearcoatRoughness=.1;
  M.wornHull=scannedBank.weathered_hull;
  addLog('Photo-scanned material bank applied to Palace environment.');
  }catch(e){addLog('Scanned textures unavailable, using procedural fallback: '+e.message)}
