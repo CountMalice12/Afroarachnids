@@ -1,3 +1,4 @@
+import {generatePalaceMaterials} from './palace-textures.js';
 /**
  * Crystal Palace sector authoring v1. Original 3D architectural interpretation
  * of the user's ten existing Director 4.0 floor plans and the detailed casino /
@@ -28,8 +29,9 @@ export function buildPalaceSector(T,id){
  const solids=[],doors=[],interactables=[],lights=[];
  const metallic=(c,r=.36,m=.83)=>new T.MeshPhysicalMaterial({color:c,metalness:m,roughness:r,clearcoat:.24,clearcoatRoughness:.13});
  const glow=(c,intensity=3)=>new T.MeshStandardMaterial({color:0x243040,emissive:c,emissiveIntensity:intensity,roughness:.4,metalness:.34,toneMapped:false});
+ const authored=generatePalaceMaterials(T);
  const mats={
-  floor:metallic(id==='CP-03'?0x777d87:id==='CP-05'?0x405759:0x344758,.22,.62),
+  floor:id==='CP-03'||id==='CP-04'?authored.marble:metallic(id==='CP-05'?0x405759:0x344758,.22,.62),
   dark:metallic(0x111e29,.63,.7),steel:metallic(0x82949f,.3,.85),white:metallic(0xc3d6d9,.32,.32),
   gold:metallic(0xd2ad64,.24,.87),glass:new T.MeshPhysicalMaterial({color:0x67b9ce,metalness:.12,roughness:.11,transparent:true,opacity:.48,depthWrite:false,clearcoat:.9,side:T.DoubleSide}),
   accent:glow(def.tint,2.7),amber:glow(0xfca961,2.7),danger:glow(0xf45878,2.8),
@@ -86,7 +88,7 @@ export function buildPalaceSector(T,id){
  function holo(x,z,rad=1.2){cylinder(x,1.7,z,rad,rad, .03,mats.accent,32);torus(x,2.1,z,rad,.04,mats.accent)}
  function furnitureTable(x,z,round=true,hp=8){
   if(round){cylinder(x,.72,z,1.14,1.14,.14,mats.gold,48);cylinder(x,.38,z,.27,.27,.6,mats.dark,24);
-    const core=box(x,.52,z,1.6,.5,1.55,mats.dark,{solid:true,hp,name:'Gaming table cover'});core.visible=false}
+    box(x,.52,z,1.6,.5,1.55,mats.dark,{solid:true,hp,name:'Gaming table cover'})}
   else box(x,.7,z,3.1,1.4,1.65,mats.steel,{solid:true,hp,name:'Service counter'});
  }
  function glassWall(x,z,w=5,h=4){box(x,h/2,z,w,h,.12,mats.glass,{solid:true,name:'Glazed partition'})}
