@@ -19,7 +19,7 @@ try {
  await page.goto('http://127.0.0.1:4173/fidelity.html?capture=1',{waitUntil:'domcontentloaded',timeout:45000});
  await page.locator('#fd-viewport canvas').waitFor({timeout:45000});
  await page.locator('#fd-loading').waitFor({state:'detached',timeout:130000});
- console.log('GLBs loaded; recording live 3D materials and camera.');
+ console.log('GLBs and Rapier initialized: recording actual 3D physics destruction, shader VFX and refined squad.');
  const stage=page.locator('#fd-viewport');
  await page.locator('#fd-film').click();
  await page.waitForTimeout(850);
@@ -32,7 +32,11 @@ try {
  await page.keyboard.press('w');await page.keyboard.press('d');
  await page.locator('#fd-film').click();
  await page.locator('#fd-scan').click();await page.waitForTimeout(800);
- await page.locator('#fd-shoot').click();await page.waitForTimeout(500);
+ await page.locator('#fd-shoot').click();await page.waitForTimeout(350);
+ await page.locator('#fd-end').click();
+ await page.locator('#fd-grenade').click();await page.waitForTimeout(1700);
+ await page.locator('#fd-shield').click();await page.waitForTimeout(900);
+ console.log('GANTRY DESTRUCTION:',await page.locator('#fd-dv').innerText());
  await page.locator('#fd-alarm').click();await page.waitForTimeout(450);
  await page.locator('#fd-camera').click();await page.waitForTimeout(500);
  // Casino: real reflective marble material, ring-balcony geometry and crystal feature.
@@ -42,19 +46,21 @@ try {
  await page.locator('#fd-film').click();
  await page.locator('#fd-camera').click();await page.waitForTimeout(600);
  await page.locator('#fd-scan').click();await page.waitForTimeout(950);
- await page.locator('#fd-shoot').click();await page.waitForTimeout(1000);
+ await page.locator('#fd-shield').click();
+ await page.locator('#fd-grenade').click();await page.waitForTimeout(1250);
  // Dock: actual ships, engineered dock assets and material reflections.
  console.log('Switching scene: docking');
  await page.locator('[data-scene="dock"]').click();await page.waitForTimeout(1200);
  await page.locator('#fd-film').click();await page.waitForTimeout(950);
  await page.locator('#fd-film').click();
  await page.keyboard.press('a');await page.keyboard.press('w');await page.waitForTimeout(700);
+ await page.locator('#fd-grenade').click();await page.waitForTimeout(1450);
  await page.locator('#fd-scan').click();await page.waitForTimeout(600);
  video=await page.video().path();
  await context.close();
 }finally{await browser.close()}
 if(!video||fs.statSync(video).size<15000)throw Error('No usable WebGL capture');
-const output='test-artifacts/Director4_CrystalPalace_Authored_Assets_Gameplay.mp4';
+const output='test-artifacts/Director4_CrystalPalace_Destruction_Physics_VFX.mp4';
 execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',video,
  '-vf','scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p',
  '-c:v','libx264','-preset','fast','-crf','23','-movflags','+faststart',output],
