@@ -1,0 +1,23 @@
+{
+  "lounge_chair": {
+    "source": "https://polyhaven.com/a/modern_arm_chair_01",
+    "license": "CC0",
+    "path": "hero-models/lounge_chair.glb",
+    "bytes": 782472,
+    "meshes": 2
+  },
+  "potted_plant": {
+    "source": "https://polyhaven.com/a/potted_plant_01",
+    "license": "CC0",
+    "path": "hero-models/potted_plant.glb",
+    "bytes": 6603424,
+    "meshes": 4
+  },
+  "flowering_shrub": {
+    "source": "https://polyhaven.com/a/shrub_01",
+    "license": "CC0",
+    "path": "hero-models/flowering_shrub.glb",
+    "bytes": 5562952,
+    "meshes": 1
+  }
+}
