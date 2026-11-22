@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+// Capture revision 2: zoomed game camera, realistic Earth texture, richer casino structure.
 fs.mkdirSync('test-artifacts/fidelity-video',{recursive:true});
 const browser=await chromium.launch({headless:true,args:[
  '--no-sandbox','--disable-gpu-sandbox','--enable-webgl',
