@@ -1,0 +1,31 @@
+{
+  "gantry_metal": {
+    "source": "https://polyhaven.com/a/metal_plate",
+    "license": "CC0",
+    "channels": {
+      "albedo": "materials/gantry_metal/albedo.jpg",
+      "normal": "materials/gantry_metal/normal.jpg",
+      "roughness": "materials/gantry_metal/roughness.jpg",
+      "metalness": "materials/gantry_metal/metalness.jpg"
+    }
+  },
+  "casino_marble": {
+    "source": "https://polyhaven.com/a/marble_tiles",
+    "license": "CC0",
+    "channels": {
+      "albedo": "materials/casino_marble/albedo.jpg",
+      "normal": "materials/casino_marble/normal.jpg",
+      "roughness": "materials/casino_marble/roughness.jpg"
+    }
+  },
+  "weathered_hull": {
+    "source": "https://polyhaven.com/a/metal_plate_02",
+    "license": "CC0",
+    "channels": {
+      "albedo": "materials/weathered_hull/albedo.jpg",
+      "normal": "materials/weathered_hull/normal.jpg",
+      "roughness": "materials/weathered_hull/roughness.jpg",
+      "metalness": "materials/weathered_hull/metalness.jpg"
+    }
+  }
+}
