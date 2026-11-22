@@ -20,6 +20,14 @@ body{background:#050e19;color:#dff5fb;font-family:Inter,system-ui,sans-serif;mar
 #fd-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px;background:linear-gradient(110deg,#07121f,#0c3040);border-bottom:1px solid #256d7c}
 #fd-header strong{font-size:14px;letter-spacing:.07em}#fd-header small{display:block;font-size:9px;letter-spacing:.18em;color:#71dcf4;margin-top:4px}
 #fd-header a{color:#9becff;font-size:11px}
+#fd-film{background:#143b52;border:1px solid #72bcd1;color:#d4f7ff;border-radius:5px;padding:7px 11px;font-size:11px;cursor:pointer}
+body.fd-film #fd-layout{display:block}
+body.fd-film #fd-panel{display:none}
+body.fd-film #fd-viewport{width:100%;height:calc(100vh - 59px)}
+body.fd-film #fd-telemetry{display:none}
+body.fd-film #fd-actions-hud{background:#071a2899;border:0}
+body.fd-film #fd-crosshair{opacity:.27}
+
 #fd-layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;min-height:calc(100vh - 59px)}
 #fd-viewport{height:calc(100vh - 59px);min-height:390px;position:relative;overflow:hidden;touch-action:none;background:#010b16}
 #fd-viewport canvas{width:100%;height:100%;display:block}
@@ -46,7 +54,7 @@ body{background:#050e19;color:#dff5fb;font-family:Inter,system-ui,sans-serif;mar
 .fd-accent{color:#7de9ff}
 @media(max-width:800px){#fd-layout{display:flex;flex-direction:column}#fd-viewport{height:59vh;min-height:310px}#fd-panel{max-height:none;overflow:visible;border-left:0;border-top:1px solid #31576b}#fd-zone{top:8px;left:8px;padding:8px}#fd-zone .title{font-size:13px}#fd-telemetry{top:8px;right:8px}#fd-actions-hud{left:7px;right:7px;bottom:6px;justify-content:space-between;font-size:9px;gap:4px;padding:8px}}
 </style>
-<div id="fd-header"><div><strong>DIRECTOR 4.0 / ORBITAL ART PASS</strong><small>GHOSTS: OPERATION ZERO • CRYSTAL PALACE</small></div><div><a href="./palace.html">Ten-floor atlas</a> · <a href="./flight.html">Space combat</a></div></div>
+<div id="fd-header"><div><strong>DIRECTOR 4.0 / ORBITAL ART PASS</strong><small>GHOSTS: OPERATION ZERO • CRYSTAL PALACE</small></div><div><button id="fd-film" type="button">IMMERSIVE VIEW</button> <a href="./palace.html">Ten-floor atlas</a> · <a href="./flight.html">Space combat</a></div></div>
 <div id="fd-layout"><main id="fd-viewport">
 <div id="fd-loading">LOADING AUTHORED GLB ENVIRONMENTS ...</div>
 <div class="fd-hud" id="fd-zone"><div class="title" id="fd-zone-title">CRYSTAL PALACE</div><div class="meta" id="fd-zone-sub"></div></div>
@@ -272,7 +280,7 @@ async function start(){
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
- camera=new THREE.PerspectiveCamera(45,1,.15,1600);camera.position.set(28,18,29);
+ camera=new THREE.PerspectiveCamera(42,1,.15,1600);camera.position.set(19,11,25);
  controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minPolarAngle=.11;controls.maxPolarAngle=Math.PI*.47;
  controls.minDistance=13;controls.maxDistance=140;controls.target.set(0,1,0);
  scene.add(new THREE.HemisphereLight(0xaacdf7,0x162031,1.25));
@@ -300,6 +308,12 @@ async function start(){
  addLog('Photo-scanned material bank applied to Palace environment.');
  }catch(e){addLog('Scanned textures unavailable, using procedural fallback: '+e.message)}
  try{earthTexture=await new THREE.TextureLoader().loadAsync('./textures/earth_atmos_2048.jpg');earthTexture.colorSpace=THREE.SRGBColorSpace;earthTexture.anisotropy=8;addLog('Loaded photographic-style Earth texture.')}catch(e){addLog('Earth image unavailable; retaining generated sphere.')} 
+ el('film').addEventListener('click',()=>{
+   document.body.classList.toggle('fd-film');
+   el('film').textContent=document.body.classList.contains('fd-film')?'EXIT IMMERSIVE VIEW':'IMMERSIVE VIEW';
+   cinematic=true;applyCamera();
+   requestAnimationFrame(resize);
+ });
  const loaded=await Promise.all(names.map(async n=>{const result=await loader.loadAsync('./models/'+n+'.glb');glb.set(n,result.scene);return n}));
  if(scannedBank)remapAuthoredHullMaterials(glb,scannedBank,addLog);
  addLog('Loaded '+loaded.length+' original GLBs with physically based material channels');
@@ -315,7 +329,7 @@ async function start(){
  requestAnimationFrame(render);
 }
 function applyCamera(){
- if(cinematic){controls.target.set(0,1,0);camGoal=current==='gantry'?new THREE.Vector3(28,18,29):current==='casino'?new THREE.Vector3(24,19,29):new THREE.Vector3(29,19,30)}
+ if(cinematic){controls.target.set(0,1,current==='gantry'?-1:0);camGoal=current==='gantry'?new THREE.Vector3(17,11,24):current==='casino'?new THREE.Vector3(19,13,27):new THREE.Vector3(22,14,27)}
  else{controls.target.set(0,0,0);camGoal=new THREE.Vector3(1,49,42)}
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
