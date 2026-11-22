@@ -3,6 +3,8 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { EffectComposer, RenderPass, EffectPass, BloomEffect } from 'postprocessing';
 import { makeShip, makeEarth, makePalace, makeStars, makeAsteroids } from './orbital-assets.js';
+import {prepareDestructionPhysics,createDestructionPhysics} from './destruction-physics.js';
+import {createCombatVFX} from './combat-vfx.js';
 
 /**
  * Director 4.0 High-Fidelity Orbital Lab
@@ -82,7 +84,7 @@ const CAPTURE_MODE=new URLSearchParams(location.search).get('capture')==='1';
 const shipInfo=$('d4-shipstats'),targetInfo=$('d4-targetbox');
 const keys=new Set(),clock=new THREE.Clock(),v0=new THREE.Vector3();
 const forwardAxis=new THREE.Vector3(0,0,-1),upAxis=new THREE.Vector3(0,1,0),rightAxis=new THREE.Vector3(1,0,0);
-let renderer,composer,scene,camera,orbit,sun,playerShip,player,env,targets=[],projectiles=[],beamFX=[],asteroidColliders=[],stationCollider=null,currentMap='earth',target=null,cameraMode='chase',mapFrames=0,quality='balanced',dpr=1.25,canFireAt=0,canMissileAt=0,lastHud=0,lastRadar=0,audio=null,muted=true,collisionCooldown=0;
+let renderer,composer,scene,camera,orbit,sun,playerShip,player,env,targets=[],projectiles=[],beamFX=[],asteroidColliders=[],stationCollider=null,currentMap='earth',target=null,cameraMode='chase',mapFrames=0,quality='balanced',dpr=1.25,canFireAt=0,canMissileAt=0,lastHud=0,lastRadar=0,audio=null,muted=true,collisionCooldown=0,destruction=null,vfx=null;
 const IDLE='IDLE';
 const state={time:0,lastMap:'earth',shipDamage:0,shots:0,collisions:0};
 function toast(message,isBad=false){const el=$('d4-toast');el.textContent=message;el.style.color=isBad?'#ff8592':'#92ebff';el.style.opacity=1;clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.style.opacity=0,1250)}
@@ -99,8 +101,13 @@ function sfx(type){
   osc.connect(gain).connect(audio.destination);osc.start(now);osc.stop(now+.22);
  }catch(e){}
 }
-function setup(){
+async function setup(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x01050c);
+ await prepareDestructionPhysics();
+ vfx=createCombatVFX(scene,{quality:CAPTURE_MODE?'mobile':'balanced'});
+ destruction=createDestructionPhysics({scene,gravity:0,
+   onDestroyed:(r,{position})=>{vfx.explosion(position,{radius:Math.max(5,r.w),space:true});log('SHIP BREAKUP: '+r.name+' scattered in zero-G','ok');}
+ });
  camera=new THREE.PerspectiveCamera(58,1,.15,2200);camera.position.set(0,8,35);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance',alpha:false});
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.65;
@@ -153,6 +160,7 @@ function createEnemy(index,heavy=false){
  return enemy
 }
 function clearScene(){
+ destruction?.registerScene([]);vfx?.reset();
  if(env){scene.remove(env);env.traverse(obj=>{if(obj.geometry)obj.geometry.dispose()});env=null}
  for(const t of targets){scene.remove(t.mesh);t.mesh.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
  targets.length=0;for(const p of projectiles){scene.remove(p.mesh);p.mesh.geometry?.dispose()}projectiles.length=0;
@@ -237,13 +245,16 @@ function drawBeam(from,to,color=0x31c9ff,size=.075){
 function damageEnemy(e,amount){
  if(e.dead)return;
  const shieldHit=Math.min(e.shield,amount);e.shield-=shieldHit;e.hp=Math.max(0,e.hp-(amount-shieldHit));
- if(e.hp<=0){e.dead=true;scene.remove(e.mesh);log(e.name+' DESTROYED','ok');toast('HOSTILE DISABLED')}
+ if(e.hp<=0){e.dead=true;
+   const p=e.mesh.position.clone();
+   destruction?.destroyCover({x:p.x,y:p.y,z:p.z,w:e.radius*1.25,d:e.radius*1.1,name:e.name+' hull',active:true,hp:0,obj:e.mesh},{point:p,impulse:140});
+   scene.remove(e.mesh);log(e.name+' DESTROYED / PHYSICAL DEBRIS','ok');toast('HOSTILE DISABLED')}
  else log(e.name+' takes '+amount+' damage ('+e.shield+' shields remain)','ok');
 }
 function damagePlayer(amount){
  if(player.hull<=0)return;
  const soak=Math.min(player.shield,amount);player.shield-=soak;player.hull=Math.max(0,player.hull-amount+soak);
- if(player.hull<=0){toast('HULL CRITICAL // RESTART SECTOR',true);log('SHIP DISABLED. Choose a sector to restart the sortie.','bad')}
+ if(player.hull<=0){vfx?.explosion(player.pos,{radius:9,space:true});toast('HULL CRITICAL // RESTART SECTOR',true);log('SHIP DISABLED. Choose a sector to restart the sortie.','bad')}
  else if(amount>10)toast('INCOMING DAMAGE',true);
 }
 function fireRailgun(){
@@ -255,7 +266,7 @@ function fireRailgun(){
  if(sol.ok){
   impact.copy(target.mesh.position);damageEnemy(target,13+Math.floor(Math.random()*15));
  }else if(sol.why){toast(sol.why,true);log('Railgun: '+sol.why,'bad')}
- drawBeam(from,impact,0x37deff,.085);state.shots++;sfx('gun')
+ drawBeam(from,impact,0x37deff,.085);vfx?.muzzle(from);state.shots++;sfx('gun')
 }
 function fireMissile(){
  if(state.time<canMissileAt||player.missiles<=0||player.hull<=0)return;
@@ -322,7 +333,7 @@ function fixedPhysics(dt){
   const p=projectiles[i];p.ttl-=dt;
   if(!p.target.dead){
    const seek=p.target.mesh.position.clone().sub(p.mesh.position);
-   if(seek.length()<4.5){damageEnemy(p.target,32);log('Missile impact on '+p.target.name,'ok');sfx('impact');p.ttl=0}
+   if(seek.length()<4.5){vfx?.explosion(p.mesh.position,{radius:2.6,space:true});damageEnemy(p.target,32);log('Missile impact on '+p.target.name,'ok');sfx('impact');p.ttl=0}
    else {p.velocity.lerp(seek.normalize().multiplyScalar(135),dt*3);p.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),p.velocity.clone().normalize())}
   }
   p.mesh.position.addScaledVector(p.velocity,dt);
@@ -375,8 +386,9 @@ function animate(){
  requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta());
  state.time+=dt;
  if(player.hull>0){const steps=Math.max(1,Math.ceil(dt/(1/90))),sub=dt/steps;for(let k=0;k<steps;k++)fixedPhysics(sub)}
+ destruction?.tick(dt);vfx?.tick(dt);
  cameraTick(dt);if(CAPTURE_MODE)renderer.render(scene,camera);else composer.render();
  mapFrames++;if(state.time-lastHud>.25){hud(mapFrames/(state.time-lastHud));mapFrames=0;lastHud=state.time}
  if(state.time-lastRadar>.1){radar();lastRadar=state.time}
 }
-try{setup()}catch(e){$('d4-error').style.display='block';$('d4-error').textContent='3D renderer unavailable: '+e.message+' . Use a WebGL2-enabled browser with hardware acceleration.';console.error(e)}
+setup().catch(e=>{$('d4-error').style.display='block';$('d4-error').textContent='3D renderer unavailable: '+e.message+' . Use a WebGL2-enabled browser with hardware acceleration.';console.error(e)})
