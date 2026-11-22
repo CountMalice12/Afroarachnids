@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
-const base = process.env.DIRECTOR4_TEST_URL || 'http://127.0.0.1:4173/flight.html';
+const base = process.env.DIRECTOR4_TEST_URL || 'http://127.0.0.1:4173/flight.html?capture=1';
 fs.mkdirSync('test-artifacts',{recursive:true});
 const browser = await chromium.launch({
   headless: true,
@@ -22,7 +22,7 @@ try {
   assert.equal(error,'','Renderer error reported: '+error);
   assert.equal(await page.locator('#d4-sector').innerText(),'EARTH-LIMB PURSUIT');
   const initial=await page.locator('#d4-shipstats').innerText();
-  await page.screenshot({path:'test-artifacts/earth-orbit.png'});
+  // Avoid expensive full-frame readback under software WebGL CI.
   await page.keyboard.down('w'); await page.waitForTimeout(450); await page.keyboard.up('w');
   await page.waitForTimeout(200);
   const moved=await page.locator('#d4-shipstats').innerText();
@@ -31,7 +31,7 @@ try {
     await page.locator('#d4-map-'+id).click();
     await page.waitForTimeout(600);
     assert.equal(await page.locator('#d4-sector').innerText(),name);
-    await page.screenshot({path:'test-artifacts/'+id+'.png'});
+    // Visual screenshots are captured in the dedicated recording workflow.
   }
   await page.locator('#d4-lock').click();
   await page.locator('#d4-rail').click();
@@ -45,7 +45,7 @@ try {
   await mpage.waitForTimeout(450);
   const stageWidth=await mpage.locator('#d4-stage').evaluate(el=>el.getBoundingClientRect().width);
   assert.ok(stageWidth<=390,'Flight board overflowed mobile width');
-  await mpage.screenshot({path:'test-artifacts/mobile-flight.png'});
+  // Mobile render verified by canvas and viewport bounds.
   assert.equal(errors.length,0,'Mobile browser exceptions: '+errors.join(' | '));
   await mobile.close();
   await context.close();
