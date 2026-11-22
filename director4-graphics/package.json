@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "preview": "vite preview --host 0.0.0.0"
+    "preview": "vite preview --host 0.0.0.0",
+    "test:smoke": "node tests/flight.smoke.mjs"
   },
   "dependencies": {
     "three": "latest",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "vite": "latest",
-    "@gltf-transform/cli": "latest"
+    "@gltf-transform/cli": "latest",
+    "playwright": "^1.56.0"
   }
 }
