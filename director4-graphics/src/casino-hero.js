@@ -109,7 +109,7 @@ function sofa(cx,cz,rot=0,scale=1,y=0){
  for(const s of [-1,1])rect(s*1.04,.20,.22,.095,.22,.095,gold,.02,g);
 }
 function gamingTable(cx,cz,rot=0,r=2.2){
- const g=new THREE.Group();g.position.set(cx,0,cz);g.rotation.y=rot;root.add(g);
+ const g=new THREE.Group();g.position.set(cx,0,cz);g.rotation.y=rot;g.userData.keepSeparate=true;root.add(g);
  // Oval profile has 56 real cylinder side facets, nested wood/brass trim and felt.
  for(const [y,rad,h,material] of [[.92,r,.14,black],[1.035,r+.10,.095,gold],[1.096,r-.16,.045,burgundy],[1.135,r-.29,.028,felt]]){
   const mesh=disc(0,y,0,rad,h,material,64,g);mesh.scale.set(1,.99,.68);
