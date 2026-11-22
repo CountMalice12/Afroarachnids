@@ -264,6 +264,7 @@ function buildCasino(){
  const shell=surroundCasino({group:roomGroup,addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
    high:!cap&&quality!=='mobile'&&window.innerWidth>=850});
  const scans=dressCasinoWithScans(roomGroup,scanModels,{mobile:cap||quality==='mobile'||window.innerWidth<850});
+ const batches=batchLuxuryArchitecture(roomGroup,{maxPerBatch:110,log:addLog});
  addCasinoPlanarReflections();
  addLog('Architectural envelope: '+shell.sealedSides+' enclosed hull sides, '+shell.windows+' observation bays, real upper soffit and ring supports.');
  addLog('CC0 scanned decor: '+scans.chairs+' chairs, '+scans.plants+' potted plants and '+scans.shrubs+' flowering bushes.');
