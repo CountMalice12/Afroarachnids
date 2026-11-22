@@ -3,6 +3,7 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+import {Reflector} from 'three/addons/objects/Reflector.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {EffectComposer,RenderPass,EffectPass,BloomEffect} from 'postprocessing';
 import {makeEarth,makeStars,makeShip} from './orbital-assets.js';
@@ -91,7 +92,7 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0,scanModels=new Map();
+let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={},destruction=null,vfx=null,shields=[],scorches=[],cameraKick=0,walkPulse=0,scanModels=new Map(),floorReflector=null;
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
  const g=new THREE.Group();
@@ -231,6 +232,24 @@ function buildGantry(){
  scanner.position.set(0,.14,-1);roomGroup.add(scanner);
  dressExteriorGantry(roomGroup,{high:quality!=='mobile'});
 }
+function addCasinoPlanarReflections(){
+ // Real-time reflected objects on the polished marble; disabled on low-power
+ // devices to keep map navigation and destruction responsive.
+ if(cap||quality==='mobile')return;
+ const px=Math.min(1024,quality==='ultra'?1024:512);
+ floorReflector=new Reflector(new THREE.PlaneGeometry(45.2,31.1),{
+  clipBias:.004,textureWidth:px,textureHeight:px,color:0x9b9d9e
+ });
+ floorReflector.rotation.x=-Math.PI/2;
+ floorReflector.position.y=.08;
+ const material=floorReflector.material;
+ material.fragmentShader=material.fragmentShader.replace(
+  'gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );',
+  'gl_FragColor = vec4( blendOverlay( base.rgb, color ), 0.19 );'
+ );
+ material.transparent=true;material.depthWrite=false;material.needsUpdate=true;
+ roomGroup.add(floorReflector);
+}
 function buildCasino(){
  lighting('casino');
  const details=buildCasinoHero({
@@ -244,6 +263,7 @@ function buildCasino(){
  const shell=surroundCasino({group:roomGroup,addLight:(x,y,z,color,intensity,range)=>light(x,y,z,color,intensity,range),
    high:!cap&&quality!=='mobile'});
  const scans=dressCasinoWithScans(roomGroup,scanModels,{mobile:cap||quality==='mobile'});
+ addCasinoPlanarReflections();
  addLog('Architectural envelope: '+shell.sealedSides+' enclosed hull sides, '+shell.windows+' observation bays, real upper soffit and ring supports.');
  addLog('CC0 scanned decor: '+scans.chairs+' chairs, '+scans.plants+' potted plants and '+scans.shrubs+' flowering bushes.');
  addLog('Rebuilt photorealism-oriented Casino: two-level mezzanine, 17-step grand staircase, custom red-velvet gaming tables, curved bar and botanical architecture.');
@@ -335,7 +355,7 @@ function applyCamera(){
  toast(cinematic?'CINEMATIC PERSPECTIVE':'TACTICAL OVERHEAD');
 }
 async function loadScene(mode){
- current=mode;if(destruction)destruction.registerScene([]);if(vfx)vfx.reset();for(const s of scorches)scene.remove(s);scorches.length=0;
+ current=mode;if(floorReflector){floorReflector.dispose();floorReflector=null;}if(destruction)destruction.registerScene([]);if(vfx)vfx.reset();for(const s of scorches)scene.remove(s);scorches.length=0;
  volume.length=0;lights.length=0;animated.length=0;crew.length=0;shields.length=0;fx.length=0;
  if(roomGroup)scene.remove(roomGroup);
  roomGroup=new THREE.Group();scene.add(roomGroup);
