@@ -20,13 +20,17 @@ try {
  await page.locator('#fd-viewport canvas').waitFor({timeout:45000});
  await page.locator('#fd-loading').waitFor({state:'detached',timeout:130000});
  console.log('GLBs loaded; recording live 3D materials and camera.');
- const stage=page.locator('#fd-viewport');const r=await stage.boundingBox();
+ const stage=page.locator('#fd-viewport');
+ await page.locator('#fd-film').click();
+ await page.waitForTimeout(850);
+ const r=await stage.boundingBox();
  // Exterior: show deck, real bulkhead and ring, crew movement, scanning and attack.
  await page.waitForTimeout(1200);
  await page.mouse.move(r.x+r.width*.58,r.y+r.height*.43);
  await page.mouse.down();await page.mouse.move(r.x+r.width*.68,r.y+r.height*.46,{steps:8});await page.mouse.up();
  await page.waitForTimeout(800);
  await page.keyboard.press('w');await page.keyboard.press('d');
+ await page.locator('#fd-film').click();
  await page.locator('#fd-scan').click();await page.waitForTimeout(800);
  await page.locator('#fd-shoot').click();await page.waitForTimeout(500);
  await page.locator('#fd-alarm').click();await page.waitForTimeout(450);
@@ -34,12 +38,16 @@ try {
  // Casino: real reflective marble material, ring-balcony geometry and crystal feature.
  console.log('Switching scene: casino');
  await page.locator('[data-scene="casino"]').click();await page.waitForTimeout(500);
+ await page.locator('#fd-film').click();await page.waitForTimeout(1200);
+ await page.locator('#fd-film').click();
  await page.locator('#fd-camera').click();await page.waitForTimeout(600);
  await page.locator('#fd-scan').click();await page.waitForTimeout(950);
  await page.locator('#fd-shoot').click();await page.waitForTimeout(1000);
  // Dock: actual ships, engineered dock assets and material reflections.
  console.log('Switching scene: docking');
  await page.locator('[data-scene="dock"]').click();await page.waitForTimeout(1200);
+ await page.locator('#fd-film').click();await page.waitForTimeout(950);
+ await page.locator('#fd-film').click();
  await page.keyboard.press('a');await page.keyboard.press('w');await page.waitForTimeout(700);
  await page.locator('#fd-scan').click();await page.waitForTimeout(600);
  video=await page.video().path();
