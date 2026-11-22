@@ -252,15 +252,45 @@ function balcony(){
    rect(x,11.53,-12.6,2.61,.045,3.9,linen,.017);
    for(const s of [-1,1])rect(x+s*1.24,11.49,-12.6,.047,.04,3.7,roseGold,.009);
  }
- rect(-12.0,4.65,-9.7,w1,.54,d1,black,.08);
- rect(-12.0,4.99,-9.7,w1,.10,d1-.16,gold,.03);
- rect(-12.0,5.07,-9.7,w1-.3,.035,d1-.4,linen,.013);
+ // Sculpted curved VIP balcony, modeled as an extruded 3D floor plate
+ // rather than the old detached rectangular platform.
+ const plan=new THREE.Shape();
+ plan.moveTo(-23,14.35);plan.lineTo(-1.6,14.35);plan.lineTo(-1.6,5.45);
+ plan.bezierCurveTo(-5.3,.65,-17.1,.65,-23,5.45);plan.closePath();
+ const deck=obj(new THREE.ExtrudeGeometry(plan,{
+   depth:.48,steps:1,bevelEnabled:true,bevelSize:.10,bevelThickness:.06,bevelSegments:3
+ }),black,0,4.55,0);
+ deck.rotation.x=-Math.PI/2;
+ const finish=obj(new THREE.ShapeGeometry(plan,36),linen,0,5.11,0);
+ finish.rotation.x=-Math.PI/2;
  for(const x of [-22,-18,-14,-10,-6,-2]){
   beam([x,0,-14.5],[x,4.7,-14.5],.24,gold);
   beam([x,1.9,-14.55],[x,1.9,-5.15],.09,gold);
-  beam([x,4.8,-14.55],[x,4.8,-5.15],.11,chrome);
  }
- curvedRail(-11.7,-4.95,11.9,Math.PI*.05,Math.PI*.93,5.02,1.13);
+ const frontCurve=new THREE.CubicBezierCurve3(
+   new THREE.Vector3(-1.6,5.18,-5.45),
+   new THREE.Vector3(-5.3,5.18,-.65),
+   new THREE.Vector3(-17.1,5.18,-.65),
+   new THREE.Vector3(-23,5.18,-5.45)
+ );
+ const upper=[],lower=[];
+ for(let i=0;i<=36;i++){
+   const p=frontCurve.getPoint(i/36);
+   upper.push([p.x,p.y+1.13,p.z]);
+   lower.push([p.x,p.y+.09,p.z]);
+   if(i%2===0){
+     beam([p.x,p.y+.08,p.z],[p.x,p.y+1.15,p.z],.031,i%6===0?gold:chrome);
+     disc(p.x,p.y+.085,p.z,.08,.12,gold,12);
+   }
+ }
+ tube(upper,.053,gold);tube(lower,.035,chrome);
+ // Recessed balcony front trim, echoed by the staircase handrails.
+ const glowPoints=frontCurve.getPoints(34).map(p=>[p.x,p.y-.20,p.z]);
+ tube(glowPoints,.047,roseGold);
+ for(let i=0;i<10;i++){
+   const p=frontCurve.getPoint(i/9);
+   beam([p.x,p.y-.42,p.z],[p.x,p.y-.06,p.z],.075,gold);
+ }
  for(let i=0;i<10;i++){
   const x=-21+i*2.3;
   rect(x,4.35,-5.15,.14,.57,.20,gold);
