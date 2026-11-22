@@ -8,7 +8,8 @@ export default defineConfig({
       input: {
         tactical: fileURLToPath(new URL('./index.html', import.meta.url)),
         orbital: fileURLToPath(new URL('./flight.html', import.meta.url)),
-        palace: fileURLToPath(new URL('./palace.html', import.meta.url))
+        palace: fileURLToPath(new URL('./palace.html', import.meta.url)),
+        fidelity: fileURLToPath(new URL('./fidelity.html', import.meta.url))
       }
     }
   }
