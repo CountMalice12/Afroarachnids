@@ -120,7 +120,7 @@ function cyl(a,b,r,mat=M.plate,parent=roomGroup){
  const p=new THREE.Vector3(...a),q=new THREE.Vector3(...b),delta=q.clone().sub(p),o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,delta.length(),16),mat);
  o.position.copy(p).add(q).multiplyScalar(.5);o.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());o.castShadow=true;parent.add(o);return o
 }
-function light(x,y,z,color,intensity,dist){const l=new THREE.PointLight(color,intensity,dist,2);l.position.set(x,y,z);roomGroup.add(l);lights.push(l);return l}
+function light(x,y,z,color,intensity,dist){const l=new THREE.PointLight(color,intensity,dist,2);l.position.set(x,y,z);l.userData.baseIntensity=intensity;roomGroup.add(l);lights.push(l);return l}
 const matrix=(x,y,z,ry=0,s=1)=>new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),new THREE.Quaternion().setFromEuler(new THREE.Euler(0,ry,0)),new THREE.Vector3(s,s,s));
 function batch(asset,transforms,parent=roomGroup,casts=false){
  const source=glb.get(asset);if(!source)throw Error('Missing GLB '+asset);
@@ -263,7 +263,7 @@ function buildDock(){
 async function start(){
  scene=new THREE.Scene();scene.background=new THREE.Color(0x030c17);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
- renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.11;
  renderer.shadowMap.enabled=!cap;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  renderer.domElement.style.touchAction='none';stage.insertBefore(renderer.domElement,stage.firstChild);
  camera=new THREE.PerspectiveCamera(51,1,.15,1600);camera.position.set(29,23,37);
@@ -273,7 +273,7 @@ async function start(){
  lightSun=new THREE.DirectionalLight(0xd8eaff,4.8);lightSun.position.set(-38,75,37);lightSun.castShadow=!cap;
  lightSun.shadow.mapSize.set(2048,2048);lightSun.shadow.camera.left=-95;lightSun.shadow.camera.right=95;
  lightSun.shadow.camera.top=95;lightSun.shadow.camera.bottom=-95;scene.add(lightSun);
- if(!cap){try{const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromScene(new RoomEnvironment(),.05).texture;p.dispose()}catch(e){addLog('IBL probe unavailable')}}
+ if(!cap||new URLSearchParams(location.search).has('renderMaterial')){try{const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromScene(new RoomEnvironment(),.08).texture;p.dispose();addLog('Studio PBR reflections active')}catch(e){addLog('IBL probe unavailable')}}
  if(!cap){
    // The panorama is an illumination/reflection probe only. Background remains orbit.
    try{
@@ -412,7 +412,7 @@ function resize(){
 function render(now){
  requestAnimationFrame(render);const dt=Math.min(.06,(now-last)/1000||.016);last=now;
  if(camGoal){camera.position.lerp(camGoal,Math.min(1,dt*1.6));if(camera.position.distanceTo(camGoal)<.1)camGoal=null}
- lights.forEach((l,i)=>l.intensity=(alarm&&i%2===0?52:32)+Math.sin(now*.0018+i)*4);
+ lights.forEach((l,i)=>l.intensity=(l.userData.baseIntensity||15)*(alarm&&i%2===0?1.22:1)*(1+Math.sin(now*.0018+i)*.035));
  animated.forEach(({o,speed})=>o.position.x-=dt*speed*11);
  if(ring)ring.rotation.z+=dt*.0018;
  for(let i=fx.length-1;i>=0;i--){fx[i].t-=dt;if(fx[i].t<=0){roomGroup.remove(fx[i].o);fx.splice(i,1)}}
