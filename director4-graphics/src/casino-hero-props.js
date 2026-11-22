@@ -55,9 +55,15 @@ export function dressCasinoWithScans(group,modelBank,{mobile=false}={}){
  if(lounge)for(const [x,z,r] of (mobile?chairs.slice(0,6):chairs)){
   putAsset(group,lounge,x,z,{height:1.22,rotation:r});info.chairs++
  }
- const planters=[[-20,9],[19,-10],[5,-12],[-3,-12],[-18,-12],[20,12]];
- if(pot)for(const [x,z] of (mobile?planters.slice(0,3):planters)){
-  putAsset(group,pot,x,z,{height:2.65,rotation:Math.abs(x*.42+z)*.3});info.plants++
+ const palms=[[-3,11],[5,-11],[17,-10],[20,14]];
+ const planters=[[-20,9],[-18,-12],[20,12]];
+ if(pot){
+  for(const [x,z] of palms){
+   putAsset(group,pot,x,z,{height:mobile?3.7:5.15,rotation:Math.abs(x*.42+z)*.3});info.plants++
+  }
+  for(const [x,z] of (mobile?planters.slice(0,1):planters)){
+   putAsset(group,pot,x,z,{height:2.65,rotation:Math.abs(x*.37+z)*.7});info.plants++
+  }
  }
  const flowerBeds=[[-18,14],[-11,-12],[4,-13],[19,13],[-20,-6]];
  if(shrub)for(const [x,z] of (mobile?flowerBeds.slice(0,2):flowerBeds)){
