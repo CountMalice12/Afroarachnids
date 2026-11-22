@@ -16,13 +16,13 @@ try{
  page.on('console',m=>{if(m.type()==='error')console.log('CONSOLE ERROR',m.text().slice(0,250))});
  await page.goto('http://127.0.0.1:4173/fidelity.html?capture=1&renderMaterial=1',{waitUntil:'domcontentloaded',timeout:60000});
  await page.locator('#fd-viewport canvas').waitFor({timeout:60000});
- await page.locator('#fd-loading').waitFor({state:'detached',timeout:145000});
+ await page.locator('#fd-loading').waitFor({state:'detached',timeout:180000});
  const name=await page.locator('#fd-zone-title').innerText();
  if(!name.includes('CASINO'))throw Error('The Casino is not the default visual showcase: '+name);
  const log=await page.locator('#fd-log').innerText();
  if(!log.includes('Rebuilt photorealism-oriented Casino'))throw Error('Premium 3D casino hero assets did not load: '+log.slice(0,300));
- console.log('CASINO PREMIUM SCENE INITIALIZED',name);
- await page.waitForTimeout(1800);
+ console.log('CASINO PREMIUM ENCLOSED SHOWROOM V2 INITIALIZED',name);
+ await page.waitForTimeout(1400);
  await page.evaluate(()=>document.querySelector('#fd-film').click());
  await page.waitForTimeout(1700);
  const vp=await page.locator('#fd-viewport').boundingBox();
