@@ -60,6 +60,7 @@ jobs:
           npm run dev -- --host 127.0.0.1 --port 4173 --strictPort > /tmp/director4-vite.log 2>&1 &
           sleep 3
           npm run test:smoke
+          node tests/palace.smoke.mjs
       - name: Upload real browser captures
         if: always()
         uses: actions/upload-artifact@v4
