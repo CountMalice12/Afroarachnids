@@ -65,3 +65,19 @@ in a GPU-enabled browser. True production quality would require
 professionally authored high-resolution GLBs, baked AO and quality HDRIs.
 
 This GitHub branch is only a staging toolkit; not a live Director 4.0 deployment.
+
+## Photorealism-oriented art pass: photobased surfaces and authored composition
+
+Open **`fidelity.html`** (Exterior Gantry CP-10, Starburst Casino CP-03, Docking Core CP-01).
+
+This pass includes:
+- Nine separately exported original, physical GLB architectural model families with usable 3D geometry.
+- Three **real photo-scanned** CC0 2K PBR material sets from Poly Haven: worn industrial metal (`metal_plate`), casino marble (`marble_tiles`), and corroded structural plating (`metal_plate_02`). Use `scripts/acquire_scanned_materials.py` to reproduce their downloads; licensing information lives in `public/materials/LICENSES.md`.
+- Two 1K CC0 HDRI reflection probes: `studio_small_09` and `industrial_workshop_foundry`, sourced by `scripts/acquire_hdri.py`. These do not replace the orbital background.
+- Original custom art dressing: engineered canopy frames and handrails, bolted panels, readable station signage, floor hazard decals, cargo clutter, casino table details, decorative volumetric lighting and contact shading. These are 3D objects, not pre-rendered 2D tactical-map pictures.
+- Actual GLB geometries for bulkheads, gantry railings, supplies and doors connected to the demonstrator's physical cover, line-of-sight and movement checks.
+
+**Quality claims:** The project is a **photorealism-oriented art prototype**, not an independently verified photorealistic game. It has photo-scanned materials and HDRI lighting, but the film-like reference image still exceeds the scene's mesh complexity, raytraced illumination, natural surface aging and character artistry. Hardware GPU benchmarking and full-rate reflective rendering remain to be validated. Software WebGL recordings use a lightweight capture mode that disables bloom and advanced shadows and therefore do not demonstrate the hardware-quality result.
+
+**Deployment:** Only the connected GitHub graphics-toolkit branch is modified, not the existing published Director 4.0 website. The ten-floor map atlas and space flight modules remain separate until the real Director source repository is available.
+
