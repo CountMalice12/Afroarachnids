@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 import {EffectComposer,RenderPass,EffectPass,BloomEffect} from 'postprocessing';
 import {makeEarth,makeStars,makeShip} from './orbital-assets.js';
@@ -76,7 +77,7 @@ const names=['gantry_floor_panel','gantry_truss_6m','pressure_rail_4m','pressure
 const glb=new Map(),loader=new GLTFLoader();
 const volume=[],lights=[],animated=[],targets=[];
 let renderer,scene,camera,controls,composer,lightSun,roomGroup,ground,crew=[],enemy,quality='balanced',current='gantry',alarm=false,cinematic=true,round=1,moves=8,action=true,enemyHP=42,playerHP=55,scanOff=0,last=0,fx=[],ring,camGoal;
-let sampleVolume,earthTexture=null,scannedBank=null;
+let sampleVolume,earthTexture=null,scannedBank=null,hdriBank={};
 function makeEarthPhoto(){
  if(!earthTexture)return makeEarth(THREE);
  const g=new THREE.Group();
@@ -93,7 +94,7 @@ const keys=new Set(),rays=new THREE.Raycaster();
 const M={};
 const mkMat=(col,met=.8,rough=.34,extras={})=>new THREE.MeshPhysicalMaterial({color:col,metalness:met,roughness:rough,clearcoat:.35,clearcoatRoughness:.18,...extras});
 M.dark=mkMat(0x182b37,.86,.45);M.plate=mkMat(0x5d778a,.88,.27);M.gold=mkMat(0xc18b4c,.92,.2);M.black=mkMat(0x08131e,.5,.5);
-M.glass=mkMat(0x73b9de,.16,.075,{transparent:true,opacity:.3,depthWrite:false,side:THREE.DoubleSide});
+M.glass=mkMat(0x73b9de,.08,.07,{transparent:true,opacity:.36,depthWrite:false,side:THREE.DoubleSide,clearcoat:1,clearcoatRoughness:.06,ior:1.48,thickness:.2,envMapIntensity:1.4});
 M.marble=generatePalaceMaterials(THREE).marble;
 M.violet=mkMat(0x8124af,.15,.18,{emissive:0x7900cf,emissiveIntensity:1.6});
 M.holo=new THREE.MeshBasicMaterial({color:0x45dbff,transparent:true,opacity:.45,side:THREE.DoubleSide});
@@ -177,6 +178,7 @@ function buildRing(){
 }
 function lighting(mode){
  const cold=mode==='gantry';
+ if(hdriBank[cold?'gantry':'casino'])scene.environment=hdriBank[cold?'gantry':'casino'];
  lightSun.intensity=cold?3.7:2.7;
  lightSun.color.setHex(cold?0xd5eaff:0xffdbb6);
  scene.background=new THREE.Color(cold?0x010b18:0x0a1023);
@@ -278,6 +280,17 @@ async function start(){
  lightSun.shadow.mapSize.set(2048,2048);lightSun.shadow.camera.left=-95;lightSun.shadow.camera.right=95;
  lightSun.shadow.camera.top=95;lightSun.shadow.camera.bottom=-95;scene.add(lightSun);
  if(!cap){try{const p=new THREE.PMREMGenerator(renderer);scene.environment=p.fromScene(new RoomEnvironment(),.05).texture;p.dispose()}catch(e){addLog('IBL probe unavailable')}}
+ if(!cap){
+   // The panorama is an illumination/reflection probe only. Background remains orbit.
+   try{
+     const hdriLoader=new RGBELoader();const pmrem=new THREE.PMREMGenerator(renderer);
+     for(const key of ['gantry','casino']){
+       const hdr=await hdriLoader.loadAsync('./hdri/'+key+'.hdr');
+       const tex=pmrem.fromEquirectangular(hdr);hdriBank[key]=tex.texture;hdr.dispose();
+     }
+     pmrem.dispose();addLog('Photo-based HDRI reflections loaded for orbital and interior surfaces.');
+   }catch(e){addLog('HDRI material reflections unavailable: '+e.message)}
+ }
  if(!cap){composer=new EffectComposer(renderer,{frameBufferType:THREE.HalfFloatType});composer.addPass(new RenderPass(scene,camera));
   composer.addPass(new EffectPass(camera,new BloomEffect({intensity:.73,luminanceThreshold:.8,luminanceSmoothing:.25,mipmapBlur:true})));}
  try{scannedBank=await loadScannedMaterials(addLog);
